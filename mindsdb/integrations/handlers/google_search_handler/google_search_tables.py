@@ -32,19 +32,22 @@ class SearchAnalyticsTable(APITable):
         params = {}
         accepted_params = ['siteUrl', 'dimensions', 'type', 'rowLimit', 'aggregationType']
         for op, arg1, arg2 in conditions:
-            if arg1 == 'startDate' or arg1 == 'endDate':
+            if (
+                arg1 not in ['startDate', 'endDate']
+                and arg1 in accepted_params
+                and op != '='
+                or arg1 not in ['startDate', 'endDate']
+                and arg1 not in accepted_params
+            ):
+                raise NotImplementedError
+            elif arg1 not in ['startDate', 'endDate']:
+                params[arg1] = arg2
+            else:
                 date = parse_utc_date(arg2)
                 if op == '=':
                     params[arg1] = date
                 else:
                     raise NotImplementedError
-            elif arg1 in accepted_params:
-                if op != '=':
-                    raise NotImplementedError
-                params[arg1] = arg2
-            else:
-                raise NotImplementedError
-
         dimensions = ['query', 'page', 'device', 'country']
 
         # Get the group by from the query.
@@ -70,7 +73,7 @@ class SearchAnalyticsTable(APITable):
 
         # Get the traffic data from the Google Search Console API.
         traffic_data = self.handler. \
-            call_application_api(method_name='get_traffic_data', params=params)
+                call_application_api(method_name='get_traffic_data', params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -171,7 +174,7 @@ class SiteMapsTable(APITable):
         params = {}
         # Get the event data from the values.
         for col, val in zip(query.columns, values):
-            if col == 'siteUrl' or col == 'feedpath':
+            if col in ['siteUrl', 'feedpath']:
                 params[col] = val
             else:
                 raise NotImplementedError
@@ -197,7 +200,7 @@ class SiteMapsTable(APITable):
         for op, arg1, arg2 in conditions:
             if op != '=':
                 raise NotImplementedError
-            if arg1 == 'siteUrl' or arg1 == 'feedpath':
+            if arg1 in ['siteUrl', 'feedpath']:
                 params[arg1] = arg2
             else:
                 raise NotImplementedError

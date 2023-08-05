@@ -21,15 +21,14 @@ class ViewsList(Resource):
             abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
 
         all_views = project.get_views()
-        all_view_objs = []
-        # Only want to return relevant fields to the user.
-        for view in all_views:
-            all_view_objs.append({
+        return [
+            {
                 'id': view['metadata']['id'],
                 'name': view['name'],
-                'query': view['query']
-            })
-        return all_view_objs
+                'query': view['query'],
+            }
+            for view in all_views
+        ]
 
     @ns_conf.doc('create_view')
     def post(self, project_name):

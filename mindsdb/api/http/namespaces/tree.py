@@ -12,14 +12,16 @@ class GetRoot(Resource):
     @ns_conf.doc('get_tree_root')
     def get(self):
         databases = ca.database_controller.get_list()
-        result = [{
-            'name': x['name'],
-            'class': 'db',
-            'type': x['type'],
-            'engine': x['engine'],
-            'deletable': x['type'] != 'system'
-        } for x in databases]
-        return result
+        return [
+            {
+                'name': x['name'],
+                'class': 'db',
+                'type': x['type'],
+                'engine': x['engine'],
+                'deletable': x['type'] != 'system',
+            }
+            for x in databases
+        ]
 
 
 @ns_conf.route('/<db_name>')

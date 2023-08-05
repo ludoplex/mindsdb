@@ -111,7 +111,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
         is_executed = executor.is_executed
         session = json.dumps(executor.session.to_json())
 
-        res = executor_pb2.ExecutorResponse(
+        return executor_pb2.ExecutorResponse(
             columns=columns,
             params=params,
             data=data,
@@ -120,7 +120,6 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             is_executed=is_executed,
             session=session,
         )
-        return res
 
     def DeleteExecutor(self, request, context):
         # to delete executors

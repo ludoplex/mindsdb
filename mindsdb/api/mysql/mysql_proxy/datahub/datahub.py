@@ -2,6 +2,4 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes import InformationSchemaDat
 
 
 def init_datahub(session):
-    datahub = InformationSchemaDataNode(session)
-
-    return datahub
+    return InformationSchemaDataNode(session)

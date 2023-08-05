@@ -16,11 +16,7 @@ class StoriesTable(APITable):
         """
         hn_handler = self.handler
 
-        # Extract the limit value from the SQL query, if it exists
-        limit = None
-        if query.limit is not None:
-            limit = query.limit.value
-
+        limit = query.limit.value if query.limit is not None else None
         # Call the Hacker News API to get the top stories
         url = f'{hn_handler.base_url}/topstories.json'
         response = requests.get(url)
@@ -89,11 +85,7 @@ class CommentsTable(APITable):
         """
         hn_handler = self.handler
 
-        # Get the limit value from the SQL query, if it exists
-        limit = None
-        if query.limit is not None:
-            limit = query.limit.value
-
+        limit = query.limit.value if query.limit is not None else None
         # Get the item ID from the SQL query
         item_id = None
         conditions = extract_comparison_conditions(query.where)
@@ -149,5 +141,5 @@ class CommentsTable(APITable):
             elif isinstance(target, ast.Identifier):
                 columns.append(target.value)
 
-        if len(columns) > 0:
+        if columns:
             result = result[columns]

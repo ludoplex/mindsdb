@@ -86,7 +86,7 @@ class BigQueryHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
-        if response.success is False and self.is_connected is True:
+        if not response.success and self.is_connected is True:
             self.is_connected = False
 
         return response
@@ -131,8 +131,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         q = f"SELECT table_name, table_type, FROM \
              `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`"
-        result = self.native_query(q)
-        return result
+        return self.native_query(q)
 
     def get_columns(self, table_name) -> Response:
         """
@@ -140,8 +139,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         q = f"SELECT column_name, data_type, FROM \
             `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
-        result = self.native_query(q)
-        return result
+        return self.native_query(q)
 
 
 connection_args = OrderedDict(

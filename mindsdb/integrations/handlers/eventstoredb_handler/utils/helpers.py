@@ -12,11 +12,7 @@ From connection settings in MindsDB to an EventStoreDB AtomPub HTTP URL
 
 def build_basic_url(scheme, host, port):
     netloc = host + ":" + str(port)
-    url = urlunparse([
-        scheme,
-        netloc,
-        "", "", "", ""])
-    return url
+    return urlunparse([scheme, netloc, "", "", "", ""])
 
 
 def build_health_url(basic_url):
@@ -36,7 +32,7 @@ def build_stream_url_last_event(basic_url, stream_name):
 
 
 def build_next_url(link_url, read_batch_size):
-    return re.sub(r"/(\d+)$", "/" + str(read_batch_size), link_url)
+    return re.sub(r"/(\d+)$", f"/{str(read_batch_size)}", link_url)
 
 
 def entry_to_df(entry):

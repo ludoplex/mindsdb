@@ -144,7 +144,7 @@ class AltibaseHandler(DatabaseHandler):
                 )
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -156,11 +156,7 @@ class AltibaseHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        query_str = query.to_string() if isinstance(query, ASTNode) else str(query)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

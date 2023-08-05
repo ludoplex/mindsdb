@@ -30,7 +30,7 @@ class FrappeDocumentsTable(APITable):
             else:
                 filters.append([arg1, op, arg2])
 
-        if not 'doctype' in params:
+        if 'doctype' not in params:
             raise ValueError('"doctype" parameter required')
 
         if query.limit:

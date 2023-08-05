@@ -10,9 +10,7 @@ with open('requirements.txt') as req_file:
 
 # TODO: relative import okay?
 with open('../../../../requirements_test.txt', 'r') as req_test_file:
-    for req in req_test_file.read().splitlines():
-        requirements.append(req)
-
+    requirements.extend(iter(req_test_file.read().splitlines()))
 setuptools.setup(
     name=about['__title__'],
     version=about['__version__'],

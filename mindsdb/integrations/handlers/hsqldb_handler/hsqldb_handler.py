@@ -91,9 +91,9 @@ class HSQLDBHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to SQLite, {e}!')
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success and need_to_close:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if not response.success and self.is_connected is True:
                 self.is_connected = False
 
         return response
@@ -113,8 +113,7 @@ class HSQLDBHandler(DatabaseHandler):
         with connection.cursor() as cursor:
             try:
                 cursor.execute(query)
-                result = cursor.fetchall()
-                if result:
+                if result := cursor.fetchall():
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame.from_records(
@@ -133,7 +132,7 @@ class HSQLDBHandler(DatabaseHandler):
                     error_message=str(e)
                 )
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -164,12 +163,7 @@ class HSQLDBHandler(DatabaseHandler):
         cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_type='BASE TABLE'")
         results = cursor.fetchall()
         df = pd.DataFrame([x[2] for x in results], columns=['table_name']) # Workaround since cursor.tables() wont work with postgres driver
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -190,12 +184,7 @@ class HSQLDBHandler(DatabaseHandler):
             columns=['column_name', 'data_type']
         )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
 connection_args = OrderedDict(
     server_name={

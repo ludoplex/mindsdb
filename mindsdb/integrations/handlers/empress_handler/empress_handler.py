@@ -84,9 +84,9 @@ class EmpressHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to Empress Embedded, {e}!')
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success and need_to_close:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if not response.success and self.is_connected is True:
                 self.is_connected = False
 
         return response
@@ -117,8 +117,7 @@ class EmpressHandler(DatabaseHandler):
         with connection.cursor() as cursor:
             try:
                 cursor.execute(query)
-                result = cursor.fetchall()
-                if result:
+                if result := cursor.fetchall():
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame.from_records(
@@ -136,7 +135,7 @@ class EmpressHandler(DatabaseHandler):
                     error_message=str(e)
                 )
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -174,13 +173,7 @@ class EmpressHandler(DatabaseHandler):
         # Create dataframe with table names
         df = pd.DataFrame(table_names, columns=['table_name', 'data_type'])
 
-        # Create response object
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name: str) -> Response:
         """
@@ -194,7 +187,9 @@ class EmpressHandler(DatabaseHandler):
         """
         conn = self.connect()
         cursor = conn.cursor()
-        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='{}'".format(table_name))
+        cursor.execute(
+            f"SELECT column_name FROM information_schema.columns WHERE table_name='{table_name}'"
+        )
         results = cursor.fetchall()
 
         # construct a pandas dataframe from the query results
@@ -203,12 +198,7 @@ class EmpressHandler(DatabaseHandler):
             columns=['column_name', 'data_type']
         )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
 
 connection_args = OrderedDict(

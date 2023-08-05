@@ -27,7 +27,7 @@ class HandlersList(Resource):
         result = []
         for handler_type, handler_meta in handlers.items():
             row = {'name': handler_type}
-            row.update(handler_meta)
+            row |= handler_meta
             result.append(row)
         return result
 

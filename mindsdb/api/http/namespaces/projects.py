@@ -15,11 +15,7 @@ class ProjectsList(Resource):
         ''' List all projects '''
         session = SessionController()
 
-        projects = [
-            {'name': i}
-            for i in session.datahub.get_projects_names()
-        ]
-        return projects
+        return [{'name': i} for i in session.datahub.get_projects_names()]
 
 
 @ns_conf.route('/<project_name>')

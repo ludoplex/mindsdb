@@ -32,14 +32,10 @@ class IntegrationDataNode(DataNode):
 
     def get_tables(self):
         response = self.integration_handler.get_tables()
-        if response.type == RESPONSE_TYPE.TABLE:
-            result_dict = response.data_frame.to_dict(orient='records')
-            result = []
-            for row in result_dict:
-                result.append(TablesRow.from_dict(row))
-            return result
-        else:
+        if response.type != RESPONSE_TYPE.TABLE:
             raise Exception(f"Can't get tables: {response.error_message}")
+        result_dict = response.data_frame.to_dict(orient='records')
+        return [TablesRow.from_dict(row) for row in result_dict]
 
     def has_table(self, tableName):
         return True
@@ -115,7 +111,7 @@ class IntegrationDataNode(DataNode):
                 new_row.append(value)
             formatted_data.append(new_row)
 
-        if len(formatted_data) == 0:
+        if not formatted_data:
             # not need to insert
             return
 
@@ -144,7 +140,7 @@ class IntegrationDataNode(DataNode):
                 result = self.integration_handler.native_query(native_query)
         except Exception as e:
             msg = str(e).strip()
-            if msg == '':
+            if not msg:
                 msg = e.__class__.__name__
             msg = f'[{self.ds_type}/{self.integration_name}]: {msg}'
             raise DBHandlerException(msg) from e

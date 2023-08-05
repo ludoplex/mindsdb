@@ -310,7 +310,7 @@ if __name__ == '__main__':
             wait_api_start(api_name, api_data['process'].pid, api_data['port'])
             for api_name, api_data in apis.items() if 'port' in api_data
         ]
-        for i, future in enumerate(asyncio.as_completed(futures)):
+        for future in asyncio.as_completed(futures):
             api_name, port, started = await future
             if started:
                 print(f"{api_name} API: started on {port}")

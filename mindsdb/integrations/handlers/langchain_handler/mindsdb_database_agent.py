@@ -32,7 +32,7 @@ class MindsDBSQL(SQLDatabase):
         # Some args above are not used in this class, but are kept for compatibility
         self._engine = engine   # executor instance
         self._metadata = metadata  # integrations controller instance
-        self._sample_rows_in_table_info = int(sample_rows_in_table_info)
+        self._sample_rows_in_table_info = sample_rows_in_table_info
         self._usable_tables = None
 
     @property
@@ -56,8 +56,11 @@ class MindsDBSQL(SQLDatabase):
                 if db != 'mindsdb':
                     try:
                         ret = self._call_engine([f'use `{db}`;', 'show tables;'])
-                        tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
-                        if tables:
+                        if tables := [
+                            lst[0]
+                            for lst in ret.data
+                            if lst[0] != 'information_schema'
+                        ]:
                             usable_tables.extend([f'{db}.{t}' for t in tables])
                     except Exception:
                         pass
@@ -83,8 +86,7 @@ class MindsDBSQL(SQLDatabase):
         """
         all_table_names = self.get_usable_table_names()
         if table_names is not None:
-            missing_tables = set(table_names).difference(all_table_names)
-            if missing_tables:
+            if missing_tables := set(table_names).difference(all_table_names):
                 raise ValueError(f"table_names {missing_tables} not found in database")
             all_table_names = table_names
 
@@ -93,8 +95,7 @@ class MindsDBSQL(SQLDatabase):
             table_info = self._get_single_table_info(table)
             tables.append(table_info)
 
-        final_str = "\n\n".join(tables)
-        return final_str
+        return "\n\n".join(tables)
 
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._metadata
@@ -108,7 +109,7 @@ class MindsDBSQL(SQLDatabase):
 
         info = f'Table named `{tbl_name}`, type `{tbl_type}`, row count: {n_rows}.\n'
         info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
-        info += "\t".join([field for field in fields])
+        info += "\t".join(list(fields))
         info += self._get_sample_rows(table_str, fields) + "\n*/"
         info += '\nColumn data types: ' + ",\t".join([f'`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
         return info
@@ -118,7 +119,15 @@ class MindsDBSQL(SQLDatabase):
         try:
             ret = self._call_engine([command])
             sample_rows = ret.data
-            sample_rows = list(map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100]+'...' for i in ls], sample_rows))
+            sample_rows = list(
+                map(
+                    lambda ls: [
+                        str(i) if len(str(i)) < 100 else f'{str[:100]}...'
+                        for i in ls
+                    ],
+                    sample_rows,
+                )
+            )
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
         except Exception:
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"

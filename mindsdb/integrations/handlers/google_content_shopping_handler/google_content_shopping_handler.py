@@ -165,27 +165,30 @@ class GoogleContentShoppingHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        args = {}
-        if params['force']:
-            args = {'force': params['force']}
+        args = {'force': params['force']} if params['force'] else {}
         if params['accountId']:
-            result = service.accounts().delete(merchantId=self.merchant_id, accountId=params['accountId'],
-                                               **args).execute()
-            return result
+            return (
+                service.accounts()
+                .delete(
+                    merchantId=self.merchant_id,
+                    accountId=params['accountId'],
+                    **args
+                )
+                .execute()
+            )
+        df = pd.DataFrame(columns=['accountId', 'status'])
+        if not params['startId']:
+            start_id = int(params['endId']) - 10
+        elif not params['endId']:
+            end_id = int(params['startId']) + 10
         else:
-            df = pd.DataFrame(columns=['accountId', 'status'])
-            if not params['startId']:
-                start_id = int(params['endId']) - 10
-            elif not params['endId']:
-                end_id = int(params['startId']) + 10
-            else:
-                start_id = int(params['startId'])
-                end_id = int(params['endId'])
+            start_id = int(params['startId'])
+            end_id = int(params['endId'])
 
-            for i in range(start_id, end_id):
-                service.accounts().delete(merchantId=self.merchant_id, accountId=i, **args).execute()
-                df = pd.concat([df, pd.DataFrame([{'accountId': str(i), 'status': 'deleted'}])], ignore_index=True)
-            return df
+        for i in range(start_id, end_id):
+            service.accounts().delete(merchantId=self.merchant_id, accountId=i, **args).execute()
+            df = pd.concat([df, pd.DataFrame([{'accountId': str(i), 'status': 'deleted'}])], ignore_index=True)
+        return df
 
     def get_orders(self, params: dict = None) -> DataFrame:
         """
@@ -247,22 +250,24 @@ class GoogleContentShoppingHandler(APIHandler):
         """
         service = self.connect()
         if params['order_id']:
-            result = service.orders().delete(merchantId=self.merchant_id, orderId=params['order_id']).execute()
-            return result
+            return (
+                service.orders()
+                .delete(merchantId=self.merchant_id, orderId=params['order_id'])
+                .execute()
+            )
+        df = pd.DataFrame(columns=['orderId', 'status'])
+        if not params['startId']:
+            start_id = int(params['endId']) - 10
+        elif not params['endId']:
+            end_id = int(params['startId']) + 10
         else:
-            df = pd.DataFrame(columns=['orderId', 'status'])
-            if not params['startId']:
-                start_id = int(params['endId']) - 10
-            elif not params['endId']:
-                end_id = int(params['startId']) + 10
-            else:
-                start_id = int(params['startId'])
-                end_id = int(params['endId'])
+            start_id = int(params['startId'])
+            end_id = int(params['endId'])
 
-            for i in range(start_id, end_id):
-                service.orders().delete(merchantId=self.merchant_id, orderId=i).execute()
-                df = pd.concat([df, pd.DataFrame([{'orderId': str(i), 'status': 'deleted'}])], ignore_index=True)
-            return df
+        for i in range(start_id, end_id):
+            service.orders().delete(merchantId=self.merchant_id, orderId=i).execute()
+            df = pd.concat([df, pd.DataFrame([{'orderId': str(i), 'status': 'deleted'}])], ignore_index=True)
+        return df
 
     def get_products(self, params: dict = None) -> DataFrame:
         """
@@ -318,25 +323,30 @@ class GoogleContentShoppingHandler(APIHandler):
         }
         service = self.connect()
         if params['product_id']:
-            result = service.products().update(merchantId=self.merchant_id, productId=params['product_id'],
-                                               updateMask=params['updateMask'], body=body).execute()
-
-            return result
+            return (
+                service.products()
+                .update(
+                    merchantId=self.merchant_id,
+                    productId=params['product_id'],
+                    updateMask=params['updateMask'],
+                    body=body,
+                )
+                .execute()
+            )
+        df = pd.DataFrame(columns=['productId', 'status'])
+        if not params['startId']:
+            start_id = int(params['endId']) - 10
+        elif not params['endId']:
+            end_id = int(params['startId']) + 10
         else:
-            df = pd.DataFrame(columns=['productId', 'status'])
-            if not params['startId']:
-                start_id = int(params['endId']) - 10
-            elif not params['endId']:
-                end_id = int(params['startId']) + 10
-            else:
-                start_id = int(params['startId'])
-                end_id = int(params['endId'])
+            start_id = int(params['startId'])
+            end_id = int(params['endId'])
 
-            for i in range(start_id, end_id):
-                service.products().update(merchantId=self.merchant_id, productId=i,
-                                          updateMask=params['updateMask'], body=body).execute()
-                df = pd.concat([df, pd.DataFrame([{'productId': str(i), 'status': 'updated'}])], ignore_index=True)
-            return df
+        for i in range(start_id, end_id):
+            service.products().update(merchantId=self.merchant_id, productId=i,
+                                      updateMask=params['updateMask'], body=body).execute()
+            df = pd.concat([df, pd.DataFrame([{'productId': str(i), 'status': 'updated'}])], ignore_index=True)
+        return df
 
     def delete_products(self, params: dict = None) -> DataFrame:
         """
@@ -351,23 +361,28 @@ class GoogleContentShoppingHandler(APIHandler):
             key: value for key, value in params.items() if key in ['feedId'] and value is not None
         }
         if params['product_id']:
-            result = service.products().delete(merchantId=self.merchant_id, productId=params['product_id'],
-                                               **args).execute()
-            return result
+            return (
+                service.products()
+                .delete(
+                    merchantId=self.merchant_id,
+                    productId=params['product_id'],
+                    **args
+                )
+                .execute()
+            )
+        df = pd.DataFrame(columns=['productId', 'status'])
+        if not params['startId']:
+            start_id = int(params['endId']) - 10
+        elif not params['endId']:
+            end_id = int(params['startId']) + 10
         else:
-            df = pd.DataFrame(columns=['productId', 'status'])
-            if not params['startId']:
-                start_id = int(params['endId']) - 10
-            elif not params['endId']:
-                end_id = int(params['startId']) + 10
-            else:
-                start_id = int(params['startId'])
-                end_id = int(params['endId'])
+            start_id = int(params['startId'])
+            end_id = int(params['endId'])
 
-            for i in range(start_id, end_id):
-                service.products().delete(merchantId=self.merchant_id, productId=i, **args).execute()
-                df = pd.concat([df, pd.DataFrame([{'productId': str(i), 'status': 'deleted'}])], ignore_index=True)
-            return df
+        for i in range(start_id, end_id):
+            service.products().delete(merchantId=self.merchant_id, productId=i, **args).execute()
+            df = pd.concat([df, pd.DataFrame([{'productId': str(i), 'status': 'deleted'}])], ignore_index=True)
+        return df
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """

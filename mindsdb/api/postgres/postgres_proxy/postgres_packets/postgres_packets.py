@@ -63,10 +63,7 @@ class PostgresPacketReader:
         # This is a reason to switch from socketserver to asyncio
         while cur < end:
             cur = time.time()
-            data = self.buffer.read(n)
-            if not data:
-                pass
-            else:
+            if data := self.buffer.read(n):
                 return data
         raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
 
@@ -87,7 +84,7 @@ class PostgresPacketReader:
         length = self.read_int32()
         code = self.read_int32()
         if length != 8 and code != 80877103:
-            raise UnsupportedSSLRequest("Code %s of len %s" % (code, length))
+            raise UnsupportedSSLRequest(f"Code {code} of len {length}")
 
     def read_startup_message(self) -> Dict[bytes, bytes]:
         self.logger.debug("reading startup message")
@@ -117,10 +114,11 @@ class PostgresPacketReader:
         except Exception as e:
             raise UnsupportedPostgresAuthException(e)
         if auth_type not in self.supported_auth_types:
-            raise UnsupportedPostgresAuthException("%s is not a supported auth type identifier" % auth_type)
+            raise UnsupportedPostgresAuthException(
+                f"{auth_type} is not a supported auth type identifier"
+            )
         length = self.read_int32()
-        password = strip_null_byte(self.read_bytes(length - 4), encoding=encoding)  # password. Do something with later. We read to clear buffer.
-        return password
+        return strip_null_byte(self.read_bytes(length - 4), encoding=encoding)
 
     def read_message(self):
         try:
@@ -134,12 +132,12 @@ class PostgresPacketReader:
             raise UnsupportedPostgresMessageType(
                 "%s is not a supported frontend message identifier:\n%s" % (message_type, str(e)))
 
-        if message_type in self.fe_message_map:
-            self.logger.debug("reading message type %s" % str(message_type.name))
-            return self.fe_message_map[message_type]().read(self)
-        else:
+        if message_type not in self.fe_message_map:
             raise UnsupportedPostgresMessageType(
-                "%s is not a supported frontend message identifier" % message_type.value)
+                f"{message_type.value} is not a supported frontend message identifier"
+            )
+        self.logger.debug(f"reading message type {str(message_type.name)}")
+        return self.fe_message_map[message_type]().read(self)
 
 
 class PostgresPacketBuilder:
@@ -174,22 +172,20 @@ class PostgresPacketBuilder:
     def write(self, write_file: BinaryIO):
         if len(self.identifier) == 0:
             raise Exception("Can't write without identifier.")
-        pack = "!c"
-
         # Send length
         # Ensures 'i' in pack and self.length in 2nd position of respective variables.
         # Also adds 4 to length to include int32 rep of length
         self.length += 4
-        pack += "i"
+        pack = "!c" + "i"
         self.pack_args = [self.length] + self.pack_args
 
         pack += self.pack_string
         self.logger.debug("writing:")
-        self.logger.debug("pack string: %s" % self.pack_string)
-        self.logger.debug("identifier: %s" % self.pack_string)
+        self.logger.debug(f"pack string: {self.pack_string}")
+        self.logger.debug(f"identifier: {self.pack_string}")
         self.logger.debug("pack args:")
         for arg in self.pack_args:
-            self.logger.debug("arg: %s" % str(arg))
+            self.logger.debug(f"arg: {str(arg)}")
         packed_binary = struct.pack(pack, self.identifier, *self.pack_args)
         write_file.write(packed_binary)
 
@@ -201,8 +197,8 @@ class PostgresPacketBuilder:
         return self.add_length(1)
 
     def add_string(self, s: bytes):
-        s = s + b'\x00'
-        self.pack_string += str(len(s)) + 's'
+        s += b'\x00'
+        self.pack_string += f'{len(s)}s'
         self.pack_args.append(s)
         return self.add_length(len(s))
 
@@ -217,10 +213,7 @@ class PostgresPacketBuilder:
         return self.add_length(2)
 
     def add_bytes(self, b: bytes):
-        if len(b) == 1:
-            self.pack_string += 's'
-        else:
-            self.pack_string += str(len(b)) + 's'
+        self.pack_string += 's' if len(b) == 1 else f'{len(b)}s'
         self.pack_args.append(b)
         return self.add_length(len(b))
 

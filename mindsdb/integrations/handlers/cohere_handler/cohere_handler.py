@@ -100,9 +100,7 @@ class CohereHandler(BaseMLEngine):
         co = cohere.Client(api_key)
 
         response = co.summarize(text)
-        text_summary = response.summary
-
-        return text_summary
+        return response.summary
 
     def predict_text_generation(self,text):
         """    
@@ -115,9 +113,7 @@ class CohereHandler(BaseMLEngine):
         co = cohere.Client(api_key)
 
         response = co.generate(text)
-        text_generated = response.generations[0].text
-
-        return text_generated
+        return response.generations[0].text
 
     def predict_language(self,text):
         """    
@@ -130,7 +126,5 @@ class CohereHandler(BaseMLEngine):
         co = cohere.Client(api_key)
 
         response = co.detect_language([text])
-        language_detected = response.results[0].language_name
-
-        return language_detected
+        return response.results[0].language_name
     

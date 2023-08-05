@@ -29,13 +29,11 @@ class DatabasesResource(Resource):
             abort(HTTPStatus.BAD_REQUEST, 'Must provide "database" parameter in POST body')
         session = SessionController()
         database = request.json['database']
-        parameters = {}
         if 'name' not in database:
             abort(HTTPStatus.BAD_REQUEST, 'Missing "name" field for database')
         if 'engine' not in database:
             abort(HTTPStatus.BAD_REQUEST, 'Missing "engine" field for database. If you want to create a project instead, use the /api/projects endpoint.')
-        if 'parameters' in database:
-            parameters = database['parameters']
+        parameters = database['parameters'] if 'parameters' in database else {}
         name = database['name']
 
         if session.database_controller.exists(name):
@@ -72,10 +70,8 @@ class DatabaseResource(Resource):
             abort(HTTPStatus.BAD_REQUEST, 'Must provide "database" parameter in POST body')
 
         session = SessionController()
-        parameters = {}
         database = request.json['database']
-        if 'parameters' in database:
-            parameters = database['parameters']
+        parameters = database['parameters'] if 'parameters' in database else {}
         if not session.database_controller.exists(database_name):
             # Create.
             if 'engine' not in database:
@@ -123,8 +119,7 @@ class TablesList(Resource):
         session = SessionController()
         datanode = session.datahub.get(database_name)
         all_tables = datanode.get_tables()
-        table_objs = [_tables_row_to_obj(t) for t in all_tables]
-        return table_objs
+        return [_tables_row_to_obj(t) for t in all_tables]
 
     @ns_conf.doc('create_table')
     def post(self, database_name):
@@ -138,16 +133,13 @@ class TablesList(Resource):
             abort(HTTPStatus.BAD_REQUEST, 'Missing "select" field for table')
         table_name = table['name']
         select_query = table['select']
-        replace = False
-        if 'replace' in table:
-            replace = table['replace']
-
+        replace = table['replace'] if 'replace' in table else False
         session = SessionController()
         try:
             session.database_controller.get_project(database_name)
             error_message = f'Database {database_name} is a project. ' \
-                + f'If you want to create a model or view, use the projects/{database_name}/models/{table_name} or ' \
-                + f'projects/{database_name}/views/{table_name} endpoints instead.'
+                    + f'If you want to create a model or view, use the projects/{database_name}/models/{table_name} or ' \
+                    + f'projects/{database_name}/views/{table_name} endpoints instead.'
             abort(HTTPStatus.BAD_REQUEST, error_message)
         except NoResultFound:
             # Only support creating tables from integrations.

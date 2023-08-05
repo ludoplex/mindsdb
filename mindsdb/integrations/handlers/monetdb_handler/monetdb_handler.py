@@ -108,9 +108,9 @@ class MonetDBHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected is True:
                 self.is_connected = False
 
         return responseCode
@@ -126,10 +126,10 @@ class MonetDBHandler(DatabaseHandler):
         """
         need_to_close = self.is_connected is False
         conn = self.connect()
-        cur=conn.cursor() 
+        cur=conn.cursor()
         try:
             cur.execute(query)
-                   
+
             if len(cur._rows)>0 :
                 result = cur.fetchall() 
                 response = Response(
@@ -152,7 +152,7 @@ class MonetDBHandler(DatabaseHandler):
 
         cur.close()    
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response

@@ -62,24 +62,27 @@ class EmailsTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
 
-            if arg1 in ['query', 'label_ids', 'include_spam_trash', 'include_attachments']:
-                if op == '=':
-                    if arg1 == 'query':
-                        params['q'] = arg2
-                    elif arg1 == 'label_ids':
-                        params['labelIds'] = arg2.split(',')
-                    elif arg1 == 'include_attachments':
-                        include_attachments = arg2 == 'true'
-                    else:
-                        params['includeSpamTrash'] = arg2
-                else:
-                    raise NotImplementedError(f'Unknown op: {op}')
-
-            else:
+            if arg1 not in [
+                'query',
+                'label_ids',
+                'include_spam_trash',
+                'include_attachments',
+            ]:
                 raise NotImplementedError(f'Unknown clause: {arg1}')
 
+            if op != '=':
+                raise NotImplementedError(f'Unknown op: {op}')
+
+            if arg1 == 'query':
+                params['q'] = arg2
+            elif arg1 == 'label_ids':
+                params['labelIds'] = arg2.split(',')
+            elif arg1 == 'include_attachments':
+                include_attachments = arg2 == 'true'
+            else:
+                params['includeSpamTrash'] = arg2
         if query.limit is not None:
             params['maxResults'] = query.limit.value
 
@@ -171,14 +174,14 @@ class EmailsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            if not 'to_email' in params:
+            if 'to_email' not in params:
                 raise ValueError('"to_email" parameter is required to send an email')
 
             message = EmailMessage()
             message['To'] = params['to_email']
-            message['Subject'] = params['subject'] if 'subject' in params else ''
+            message['Subject'] = params.get('subject', '')
 
-            content = params['body'] if 'body' in params else ''
+            content = params.get('body', '')
             message.set_content(content)
 
             # If threadId is present then add References and In-Reply-To headers
@@ -212,14 +215,13 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-            if arg1 == 'message_id':
-                if op == '=':
-                    self.handler.call_gmail_api('delete_message', {'id': arg2})
-                else:
-                    raise NotImplementedError(f'Unknown op: {op}')
-            else:
+                raise NotImplementedError('OR is not supported')
+            if arg1 != 'message_id':
                 raise NotImplementedError(f'Unknown clause: {arg1}')
+            if op == '=':
+                self.handler.call_gmail_api('delete_message', {'id': arg2})
+            else:
+                raise NotImplementedError(f'Unknown op: {op}')
 
     def update(self, query: ast.Update) -> None:
         """Updates a label of a message.
@@ -234,14 +236,13 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-            if arg1 == 'id':
-                if op == '=':
-                    params['id'] = arg2
-                else:
-                    raise NotImplementedError(f'Unknown op: {op}')
-            else:
+                raise NotImplementedError('OR is not supported')
+            if arg1 != 'id':
                 raise NotImplementedError(f'Unknown clause: {arg1}')
+            if op == '=':
+                params['id'] = arg2
+            else:
+                raise NotImplementedError(f'Unknown op: {op}')
         request_body = {}
         values = query.update_columns.items()
         data_list = list(values)
@@ -488,18 +489,15 @@ class GmailHandler(APIHandler):
             method = service.users().messages().list
         elif method_name == 'send_message':
             method = service.users().messages().send
-        elif method_name == "delete_message":
-            method = service.users().messages().trash
         elif method_name == 'update_message':
             method = service.users().messages().modify
+        elif method_name == "delete_message":
+            method = service.users().messages().trash
         else:
             raise NotImplementedError(f'Unknown method_name: {method_name}')
 
         left = None
-        count_results = None
-        if 'maxResults' in params:
-            count_results = params['maxResults']
-
+        count_results = params.get('maxResults', None)
         params['userId'] = 'me'
 
         data = []
@@ -518,11 +516,7 @@ class GmailHandler(APIHandler):
                     data = data[:left]
                     break
 
-                if left > self.max_page_size:
-                    params['maxResults'] = self.max_page_size
-                else:
-                    params['maxResults'] = left
-
+                params['maxResults'] = min(left, self.max_page_size)
             log.logger.debug(f'Calling Gmail API: {method_name} with params ({params})')
 
             resp = method(**params).execute()
@@ -537,6 +531,4 @@ class GmailHandler(APIHandler):
             else:
                 break
 
-        df = pd.DataFrame(data)
-
-        return df
+        return pd.DataFrame(data)

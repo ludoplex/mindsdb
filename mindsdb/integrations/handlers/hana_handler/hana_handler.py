@@ -128,9 +128,9 @@ class HanaHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to SAP HANA {self.address}, {e}!')
             response.error_message = e
 
-        if response.success is True and need_to_close:
+        if response.success and need_to_close:
             self.disconnect()
-        if response.success is False and self.is_connected is True:
+        if not response.success and self.is_connected is True:
             self.is_connected = False
 
         return response
@@ -169,7 +169,7 @@ class HanaHandler(DatabaseHandler):
                 )
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -187,7 +187,8 @@ class HanaHandler(DatabaseHandler):
         List all tables in SAP HANA in the current schema
         """
 
-        return self.native_query(f"""
+        return self.native_query(
+            """
             SELECT SCHEMA_NAME,
                    TABLE_NAME,
                    TABLE_TYPE
@@ -196,7 +197,8 @@ class HanaHandler(DatabaseHandler):
             WHERE IS_SYSTEM_TABLE = 'FALSE'  
               AND IS_USER_DEFINED_TYPE = 'FALSE'
               AND IS_TEMPORARY = 'FALSE'
-        """)
+        """
+        )
 
     def get_columns(self, table_name: str) -> Response:
         """

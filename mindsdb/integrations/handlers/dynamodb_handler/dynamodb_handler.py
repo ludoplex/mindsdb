@@ -95,9 +95,9 @@ class DyanmoDBHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to DynamoDB, {e}!')
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success and need_to_close:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if not response.success and self.is_connected is True:
                 self.is_connected = False
 
         return response
@@ -118,9 +118,7 @@ class DyanmoDBHandler(DatabaseHandler):
         try:
             result = connection.execute_statement(Statement=query)
             if result['Items']:
-                records = []
-                for record in result['Items']:
-                    records.append(self.parse_record(record))
+                records = [self.parse_record(record) for record in result['Items']]
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.json_normalize(records)
@@ -135,7 +133,7 @@ class DyanmoDBHandler(DatabaseHandler):
             )
 
         connection.close()
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -170,12 +168,7 @@ class DyanmoDBHandler(DatabaseHandler):
             columns=['table_name']
         )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -201,12 +194,7 @@ class DyanmoDBHandler(DatabaseHandler):
             }
         )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
 
 connection_args = OrderedDict(

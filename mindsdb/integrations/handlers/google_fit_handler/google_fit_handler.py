@@ -55,10 +55,8 @@ class GoogleFitHandler(APIHandler):
             return self.api
         if self.connection_args:
             credentialDict = {"installed":self.connection_args}
-            f = open(self.credentials_path, "w")
-            f.write(json.dumps(credentialDict).replace(" ", ""))
-            f.close()
-            
+            with open(self.credentials_path, "w") as f:
+                f.write(json.dumps(credentialDict).replace(" ", ""))
         creds = None
 
         if os.path.isfile('mindsdb/integrations/handlers/google_fit_handler/token.json'):
@@ -73,7 +71,7 @@ class GoogleFitHandler(APIHandler):
             with open('mindsdb/integrations/handlers/google_fit_handler/token.json', 'w') as token:
                 token.write(creds.to_json())
         self.api = build('fitness', 'v1', credentials=creds)
-        
+
         self.is_connected = True
         return self.api
 
@@ -125,8 +123,7 @@ class GoogleFitHandler(APIHandler):
                                             tz=pytz.timezone(str(get_localzone())))
             local_date_str = local_date.strftime(DATE_FORMAT)
 
-            data_point = daily_step_data['dataset'][0]['point']
-            if data_point:
+            if data_point := daily_step_data['dataset'][0]['point']:
                 count = data_point[0]['value'][0]['intVal']
                 data_source_id = data_point[0]['originDataSourceId']
                 steps[local_date_str] = {'steps': count, 'originDataSourceId': data_source_id}
@@ -146,6 +143,7 @@ class GoogleFitHandler(APIHandler):
         """
         self.connect()
         if method_name == 'get_steps':
-            val = self.get_steps(params['start_time'], params['end_time'])
-            return val
-        raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))
+            return self.get_steps(params['start_time'], params['end_time'])
+        raise NotImplementedError(
+            f'Method name {method_name} not supported by Google Fit Handler'
+        )

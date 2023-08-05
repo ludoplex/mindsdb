@@ -33,15 +33,11 @@ class TaskType(Enum):
 
 
 def is_invalid_type(name: str, type_class: Enum) -> bool:
-    if name is None:
-        return True
-    return not name in type_class._member_names_
+    return True if name is None else name not in type_class._member_names_
 
 
 def enum_to_str(type_class: Enum) -> str:
-    all = []
-    for element in type_class:
-        all.append(element.name)
+    all = [element.name for element in type_class]
     return "|".join(all)
 
 
@@ -56,14 +52,13 @@ def to_ts_dataframe(df: pd.DataFrame, time_col=None) -> (pd.DataFrame, str):
                 idx = pd.to_datetime(df[time_col])
             except Exception as e:
                 raise Exception("can not convert column to datetime: " + time_col + " " + str(e))
-    # if time column has not been specified, try to find one
+    elif datetime_cols := list(
+        df.select_dtypes(include=["datetime"]).columns.values
+    ):
+        time_col = datetime_cols[0]
+        idx = pd.to_datetime(df[time_col])
     else:
-        datetime_cols = list(df.select_dtypes(include=["datetime"]).columns.values)
-        if len(datetime_cols) > 0:
-            time_col = datetime_cols[0]
-            idx = pd.to_datetime(df[time_col])
-        else:
-            raise Exception("can not find datetime column for time series")
+        raise Exception("can not find datetime column for time series")
     # build return dataframe
     rt_df = copy.deepcopy(df)
     rt_df.drop(columns=[time_col], inplace=True)
@@ -95,28 +90,26 @@ class MerlionHandler(BaseMLEngine):
     def create(self, target, args=None, **kwargs):
         df: pd.DataFrame = kwargs.get(self.KWARGS_DF, None)
         # prepare arguments
-        using_args = args.get("using", dict())
+        using_args = args.get("using", {})
         task = using_args.get(self.ARG_USING_TASK, TaskType.forecast.name)
         model_type = using_args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
-        timeseries_settings = args.get("timeseries_settings", dict())
+        timeseries_settings = args.get("timeseries_settings", {})
         time_column = timeseries_settings.get("order_by", None)
         horizon = timeseries_settings.get("horizon", self.DEFAULT_MAX_PREDICT_STEP)
         window = timeseries_settings.get("window", self.DEFAULT_PREDICT_BASE_WINDOW)
         # update args for default value maybe has been used, only time column will be set afterwards
-        serialize_args = dict()
-        serialize_args[self.ARG_TARGET] = target
-        serialize_args[self.ARG_USING_TASK] = task
-        serialize_args[self.ARG_USING_MODEL_TYPE] = model_type
-        serialize_args[self.ARG_PREDICT_HORIZON] = horizon
-        serialize_args[self.ARG_BASE_WINDOW] = window
-
-        # check df
+        serialize_args = {
+            self.ARG_TARGET: target,
+            self.ARG_USING_TASK: task,
+            self.ARG_USING_MODEL_TYPE: model_type,
+            self.ARG_PREDICT_HORIZON: horizon,
+            self.ARG_BASE_WINDOW: window,
+        }
         if df is None:
             raise Exception("missing required key in args: " + self.KWARGS_DF)
-        else:
-            column_sequence = sorted(list(df.columns.values))
-            df = df[column_sequence]
-            serialize_args[self.ARG_COLUMN_SEQUENCE] = column_sequence
+        column_sequence = sorted(list(df.columns.values))
+        df = df[column_sequence]
+        serialize_args[self.ARG_COLUMN_SEQUENCE] = column_sequence
 
         # check task, model_type and get the adapter_class
         adapter_class = self.__args_to_adapter_class(task=task, model_type=model_type)
@@ -131,7 +124,7 @@ class MerlionHandler(BaseMLEngine):
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
-        log.logger.info("Training model, args: " + json.dumps(serialize_args))
+        log.logger.info(f"Training model, args: {json.dumps(serialize_args)}")
         adapter.train(df=ts_df, target=target)
         log.logger.info("Training model completed.")
 
@@ -194,11 +187,22 @@ class MerlionHandler(BaseMLEngine):
         try:
             task_enum = TaskType[task]
         except Exception as e:
-            raise Exception("wrong using.task: " + task + ", valid options: " + enum_to_str(TaskType))
+            raise Exception(
+                f"wrong using.task: {task}, valid options: "
+                + enum_to_str(TaskType)
+            )
         # check and get model class
         try:
             adapter_class = task_enum.value[model_type].value
         except Exception as e:
-            raise Exception("Wrong using.model_type: " + model_type + ", valid options: " +
-                            enum_to_str(task_enum.value) + ", " + str(e))
+            raise Exception(
+                (
+                    (
+                        f"Wrong using.model_type: {model_type}, valid options: "
+                        + enum_to_str(task_enum.value)
+                    )
+                    + ", "
+                )
+                + str(e)
+            )
         return adapter_class

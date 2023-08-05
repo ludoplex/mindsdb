@@ -43,13 +43,16 @@ class AuroraHandler(DatabaseHandler):
 
         if self.connection_data['db_engine'] == 'mysql' or database_engine == 'aurora':
             self.db = MySQLHandler(
-                name=name + 'mysql',
-                connection_data=self.connection_data
+                name=f'{name}mysql', connection_data=self.connection_data
             )
         elif self.connection_data['db_engine'] == 'postgresql' or database_engine == 'aurora-postgresql':
             self.db = PostgresHandler(
-                name=name + 'postgresql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=f'{name}postgresql',
+                connection_data={
+                    key: self.connection_data[key]
+                    for key in self.connection_data
+                    if key != 'db_engine'
+                },
             )
         else:
             raise Exception("The database engine should be either MySQL or PostgreSQL!")

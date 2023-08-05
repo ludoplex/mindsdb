@@ -172,12 +172,9 @@ class LightwoodHandlerTest(unittest.TestCase):
             WINDOW 8
             HORIZON 4
         """
-        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
-            response = self.handler.native_query(query)
-        else:
+        if self.test_model_2 in self.handler.get_tables().data_frame.values:
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
-            response = self.handler.native_query(query)
-
+        response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
         # TODO: reactivate and add to the rest of the TS tests once cache is back on
@@ -195,11 +192,9 @@ class LightwoodHandlerTest(unittest.TestCase):
             WINDOW 8
             HORIZON 1
         """
-        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
-            self.handler.native_query(query)
-        else:
+        if self.test_model_2 in self.handler.get_tables().data_frame.values:
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
-            self.handler.native_query(query)
+        self.handler.native_query(query)
 
     def test_13_train_ts_predictor_no_gby_hor1(self):
         query = f"""
@@ -210,11 +205,9 @@ class LightwoodHandlerTest(unittest.TestCase):
             WINDOW 8
             HORIZON 1
         """
-        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
-            self.handler.native_query(query)
-        else:
+        if self.test_model_2 in self.handler.get_tables().data_frame.values:
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
-            self.handler.native_query(query)
+        self.handler.native_query(query)
 
     def test_14_train_ts_predictor_no_gby_hor4(self):
         query = f"""
@@ -225,11 +218,9 @@ class LightwoodHandlerTest(unittest.TestCase):
             WINDOW 8
             HORIZON 4
         """
-        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
-            self.handler.native_query(query)
-        else:
+        if self.test_model_2 in self.handler.get_tables().data_frame.values:
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
-            self.handler.native_query(query)
+        self.handler.native_query(query)
 
     # TODO
     # def test_15_join_predictor_ts_into(self):

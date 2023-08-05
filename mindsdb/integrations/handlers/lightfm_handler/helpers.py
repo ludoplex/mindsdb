@@ -27,25 +27,25 @@ def get_item_user_idx(args: dict, n_users, n_items, item_ids=None, user_ids=None
         # repeat the full list of item indexes n_user times
         item_idxs = np.tile(item_idx, n_users)
 
-    elif item_ids and not user_ids:
+    elif item_ids:
         item_idx = np.array(
             [int(args["item_id_to_idx_map"][item_id]) for item_id in item_ids]
         )
 
-        user_idxs = np.repeat([i for i in range(0, n_users)], n_items)
+        user_idxs = np.repeat(list(range(0, n_users)), n_items)
         item_idxs = np.tile(item_idx, n_users)
 
-    elif user_ids and not item_ids:
+    elif user_ids:
         user_idx = np.array(
             [int(args["user_id_to_idx_map"][user_id]) for user_id in user_ids]
         )
 
         user_idxs = np.repeat(user_idx, n_items)
-        item_idxs = np.tile([i for i in range(0, n_items)], n_users)
+        item_idxs = np.tile(list(range(0, n_items)), n_users)
 
     else:
-        user_idxs = np.repeat([i for i in range(0, n_users)], n_items)
-        item_idxs = np.tile([i for i in range(0, n_items)], n_users)
+        user_idxs = np.repeat(list(range(0, n_users)), n_items)
+        item_idxs = np.tile(list(range(0, n_items)), n_users)
 
     return item_idxs, user_idxs
 

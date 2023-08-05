@@ -35,11 +35,7 @@ class GithubIssuesTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
-
+        total_results = query.limit.value if query.limit else 20
         issues_kwargs = {}
         order_by_conditions = {}
 
@@ -90,14 +86,13 @@ class GithubIssuesTable(APITable):
                 issues_kwargs["labels"] = a_where[2].split(",")
 
                 continue
-            if a_where[1] in ["assignee", "creator"]:
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
-
-                issues_kwargs[a_where[1]] = a_where[2]
-            else:
+            if a_where[1] not in ["assignee", "creator"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
+            if a_where[0] != "=":
+                raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+            issues_kwargs[a_where[1]] = a_where[2]
         self.handler.connect()
 
         github_issues_df = pd.DataFrame(columns=self.get_columns())
@@ -269,7 +264,7 @@ class GithubIssuesTable(APITable):
 
                 existing_labels = current_repo.get_labels()
 
-                existing_labels_set = set([label.name for label in existing_labels])
+                existing_labels_set = {label.name for label in existing_labels}
 
                 if not set(inserted_labels).issubset(existing_labels_set):
                     new_inserted_labels = set(inserted_labels).difference(
@@ -341,11 +336,7 @@ class GithubPullRequestsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
-
+        total_results = query.limit.value if query.limit else 20
         issues_kwargs = {}
         order_by_conditions = {}
 
@@ -397,14 +388,13 @@ class GithubPullRequestsTable(APITable):
                 issues_kwargs["state"] = a_where[2]
 
                 continue
-            if a_where[1] in ["head", "base"]:
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
-
-                issues_kwargs[a_where[1]] = a_where[2]
-            else:
+            if a_where[1] not in ["head", "base"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
+            if a_where[0] != "=":
+                raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+            issues_kwargs[a_where[1]] = a_where[2]
         self.handler.connect()
 
         github_pull_requests_df = pd.DataFrame(columns=self.get_columns())

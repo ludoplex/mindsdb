@@ -19,7 +19,7 @@ def start(verbose, no_studio, with_nlp):
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
-    log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
+    log.initialize_log(config, 'http', wrap_print=server.lower() != 'gunicorn')
 
     init_lexer_parsers()
 

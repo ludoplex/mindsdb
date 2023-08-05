@@ -46,7 +46,7 @@ def define_deps():
     for r in defaults:
         if 'git+https' in r:
             pkg = r.split('#')[-1]
-            links.append(r + '-9876543210')
+            links.append(f'{r}-9876543210')
             requirements.append(pkg.replace('egg=', ''))
         else:
             requirements.append(r.strip())

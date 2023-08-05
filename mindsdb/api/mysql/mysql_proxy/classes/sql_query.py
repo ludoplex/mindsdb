@@ -100,10 +100,7 @@ def get_table_alias(table_obj, default_db_name):
             name = (table_obj.parts[0], table_obj.parts[-1])
     elif isinstance(table_obj, Select):
         # it is subquery
-        if table_obj.alias is None:
-            name = 't'
-        else:
-            name = table_obj.alias.parts[0]
+        name = 't' if table_obj.alias is None else table_obj.alias.parts[0]
         name = (default_db_name, name)
     elif isinstance(table_obj, Join):
         # get from first table
@@ -129,9 +126,7 @@ def get_all_tables(stmt):
         from_stmt = stmt.from_table
     elif isinstance(stmt, (Identifier, Join)):
         from_stmt = stmt
-    elif isinstance(stmt, Insert):
-        from_stmt = stmt.table
-    elif isinstance(stmt, Delete):
+    elif isinstance(stmt, (Insert, Delete)):
         from_stmt = stmt.table
     else:
         # raise SqlApiException(f'Unknown type of identifier: {stmt}')
@@ -190,10 +185,10 @@ def join_query_data(target, source):
 
 def is_empty_prediction_row(predictor_value):
     "Define empty rows in predictor after JOIN"
-    for key in predictor_value:
-        if predictor_value[key] is not None and pd.notna(predictor_value[key]):
-            return False
-    return True
+    return not any(
+        predictor_value[key] is not None and pd.notna(predictor_value[key])
+        for key in predictor_value
+    )
 
 
 class Column:
@@ -218,8 +213,7 @@ class Column:
         table_name = self.table_name if self.table_alias is None else self.table_alias
         name = self.name if self.alias is None else self.alias
 
-        name = f'{prefix}_{table_name}_{name}'
-        return name
+        return f'{prefix}_{table_name}_{name}'
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
@@ -230,9 +224,7 @@ class ResultSet:
         self._columns = []
         # records is list of lists with the same length as columns
         self._records = []
-        for i in range(length):
-            self._records.append([])
-
+        self._records.extend([] for _ in range(length))
         self.is_prediction = False
 
     def __repr__(self):
@@ -263,12 +255,9 @@ class ResultSet:
         return self
 
     def from_df_cols(self, df, col_names, strict=True):
-        # find column by alias
-        alias_idx = {}
-        for col in col_names.values():
-            if col.alias is not None:
-                alias_idx[col.alias] = col
-
+        alias_idx = {
+            col.alias: col for col in col_names.values() if col.alias is not None
+        }
         resp_dict = df.to_dict(orient='split')
 
         self._records = resp_dict['data']
@@ -316,11 +305,9 @@ class ResultSet:
     # --- columns ---
 
     def _locate_column(self, col):
-        col_idx = None
-        for i, col0 in enumerate(self._columns):
-            if col0 is col:
-                col_idx = i
-                break
+        col_idx = next(
+            (i for i, col0 in enumerate(self._columns) if col0 is col), None
+        )
         if col_idx is None:
             raise ErSqlWrongArguments(f'Column is not found: {col}')
         return col_idx
@@ -333,10 +320,7 @@ class ResultSet:
         # update records
         if len(self._records) > 0:
             for rec in self._records:
-                if len(values) > 0:
-                    value = values.pop(0)
-                else:
-                    value = None
+                value = values.pop(0) if len(values) > 0 else None
                 rec.append(value)
 
     def del_column(self, col):
@@ -350,11 +334,9 @@ class ResultSet:
         return self._columns
 
     def get_column_names(self):
-        columns = [
-            col.name if col.alias is None else col.alias
-            for col in self._columns
+        return [
+            col.name if col.alias is None else col.alias for col in self._columns
         ]
-        return columns
 
     def find_columns(self, alias=None, table_alias=None):
         col_list = []
@@ -409,10 +391,7 @@ class ResultSet:
         # !!! Attention: !!!
         # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
-        records = []
-        for row in self._records:
-            records.append(dict(zip(names, row)))
-        return records
+        return [dict(zip(names, row)) for row in self._records]
 
     # def clear_records(self):
     #     self._records = []
@@ -505,7 +484,7 @@ class SQLQuery():
                     if isinstance(order_by, list):
                         order_by = order_by[0]
                     group_by = ts_settings.get('group_by')
-                    if isinstance(group_by, list) is False and group_by is not None:
+                    if not isinstance(group_by, list) and group_by is not None:
                         group_by = [group_by]
                     predictor.update({
                         'timeseries': True,
@@ -531,11 +510,7 @@ class SQLQuery():
     def fetch(self, view='list'):
         data = self.fetched_data
 
-        if view == 'dataframe':
-            result = data.to_df()
-        else:
-            result = data.get_records_raw()
-
+        result = data.to_df() if view == 'dataframe' else data.get_records_raw()
         return {
             'success': True,
             'result': result
@@ -608,7 +583,7 @@ class SQLQuery():
         # mark vars
         steps = []
         for substep in step.steps:
-            if isinstance(substep, FetchDataframeStep) is False:
+            if not isinstance(substep, FetchDataframeStep):
                 raise ErLogicError(f'Wrong step type for MultipleSteps: {step}')
             substep = copy.deepcopy(substep)
             markQueryVar(substep.query.where)
@@ -625,40 +600,40 @@ class SQLQuery():
         return data
 
     def prepare_query(self, prepare=True):
-        if prepare:
-            # it is prepared statement call
-            steps_data = []
-            try:
-                for step in self.planner.prepare_steps(self.query):
-                    data = self.execute_step(step, steps_data)
-                    step.set_result(data)
-                    steps_data.append(data)
-            except PlanningException as e:
-                raise ErLogicError(e)
+        if not prepare:
+            return
+        # it is prepared statement call
+        steps_data = []
+        try:
+            for step in self.planner.prepare_steps(self.query):
+                data = self.execute_step(step, steps_data)
+                step.set_result(data)
+                steps_data.append(data)
+        except PlanningException as e:
+            raise ErLogicError(e)
 
-            statement_info = self.planner.get_statement_info()
+        statement_info = self.planner.get_statement_info()
 
-            self.columns_list = []
-            for col in statement_info['columns']:
-                self.columns_list.append(
-                    Column(
-                        database=col['ds'],
-                        table_name=col['table_name'],
-                        table_alias=col['table_alias'],
-                        name=col['name'],
-                        alias=col['alias'],
-                        type=col['type']
-                    )
-                )
-
-            self.parameters = [
-                Column(
-                    name=col['name'],
-                    alias=col['alias'],
-                    type=col['type']
-                )
-                for col in statement_info['parameters']
-            ]
+        self.columns_list = []
+        self.columns_list.extend(
+            Column(
+                database=col['ds'],
+                table_name=col['table_name'],
+                table_alias=col['table_alias'],
+                name=col['name'],
+                alias=col['alias'],
+                type=col['type'],
+            )
+            for col in statement_info['columns']
+        )
+        self.parameters = [
+            Column(
+                name=col['name'],
+                alias=col['alias'],
+                type=col['type']
+            )
+            for col in statement_info['parameters']
+        ]
 
     def execute_query(self, params=None):
         if self.fetched_data is not None:
@@ -690,16 +665,16 @@ class SQLQuery():
         self.query = self.planner.query
 
         # there was no executing
-        if len(steps_data) == 0:
+        if not steps_data:
             return
 
         try:
-            if self.outer_query is not None:
-                # workaround for subqueries in superset. remove it?
-                # +++
-                # ???
+            # workaround for subqueries in superset. remove it?
+            # +++
+            # ???
 
-                result = steps_data[-1]
+            result = steps_data[-1]
+            if self.outer_query is not None:
                 df = result.to_df()
 
                 df2 = query_df(df, self.outer_query)
@@ -710,7 +685,6 @@ class SQLQuery():
                 self.fetched_data = result2
 
             else:
-                result = steps_data[-1]
                 self.fetched_data = result
         except Exception as e:
             raise SqlApiUnknownError("error in preparing result query step") from e
@@ -1482,7 +1456,7 @@ class SQLQuery():
                 for arg in filter_args
                 if isinstance(arg, Constant) and isinstance(arg.value, str)
             ]
-            if len(samples) > 0:
+            if samples:
 
                 for arg in filter_args:
                     if isinstance(arg, Constant) and isinstance(arg.value, str):
@@ -1519,23 +1493,20 @@ class SQLQuery():
                 for arg in filter_args
                 if isinstance(arg, Constant) and isinstance(arg.value, str)
             ]
-            if len(samples) > 0:
+            if samples:
                 date_format = get_date_format(samples)
 
                 for arg in filter_args:
                     if isinstance(arg, Constant) and isinstance(arg.value, str):
                         arg.value = dt.datetime.strptime(arg.value, date_format)
-            # TODO can be dt.date in args?
+                # TODO can be dt.date in args?
 
         # first pass: get max values for Latest in table data
         latest_vals = {}
         if Latest() in filter_args:
 
             for row in table_data:
-                if group_cols is None:
-                    key = 0  # the same for any value
-                else:
-                    key = tuple([str(row[i]) for i in group_cols])
+                key = 0 if group_cols is None else tuple(str(row[i]) for i in group_cols)
                 val = row[order_col]
                 if key not in latest_vals or latest_vals[key] < val:
                     latest_vals[key] = val
@@ -1558,10 +1529,7 @@ class SQLQuery():
                 }
                 arg = filter_args[1]
                 if isinstance(arg, Latest):
-                    if group_cols is None:
-                        key = 0  # the same for any value
-                    else:
-                        key = tuple([str(row[i]) for i in group_cols])
+                    key = 0 if group_cols is None else tuple(str(row[i]) for i in group_cols)
                     if key not in latest_vals:
                         # pass this row
                         continue

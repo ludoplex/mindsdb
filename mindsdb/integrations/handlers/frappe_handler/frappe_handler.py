@@ -35,9 +35,9 @@ class FrappeHandler(APIHandler):
         self.is_connected = False
 
         args = kwargs.get('connection_data', {})
-        if not 'access_token' in args:
+        if 'access_token' not in args:
             raise ValueError('"access_token" parameter required for authentication')
-        if not 'domain' in args:
+        if 'domain' not in args:
             raise ValueError('"domain" parameter required to connect to your Frappe instance')
         self.access_token = args['access_token']
         self.domain = args['domain']
@@ -75,7 +75,7 @@ class FrappeHandler(APIHandler):
         """
         invoice = json.loads(data)
         date = dt.datetime.strptime(invoice['due_date'], '%Y-%m-%d')
-        if date <= dt.datetime.today():
+        if date <= dt.datetime.now():
             return 'Error: due_date have to be in the future'
 
         for item in invoice['items']:
@@ -95,7 +95,7 @@ class FrappeHandler(APIHandler):
             self.client.post_document('Sales Invoice', invoice)
         except Exception as e:
             return f"Error: {e}"
-        return f"Success"
+        return "Success"
 
     def check_item_code(self, item_code):
         self.connect()
@@ -121,9 +121,7 @@ class FrappeHandler(APIHandler):
     def check_customer(self, name):
         self.connect()
         result = self.client.get_documents('Customer', filters=[['name', '=', name]])
-        if len(result) == 1:
-            return True
-        return "Customer doesn't exist"
+        return True if len(result) == 1 else "Customer doesn't exist"
 
     def connect(self) -> FrappeClient:
         """Creates a new  API client if needed and sets it as the client to use for requests.
@@ -205,4 +203,6 @@ class FrappeHandler(APIHandler):
             return self._get_document(params)
         if method_name == 'create_document':
             return self._create_document(params)
-        raise NotImplementedError('Method name {} not supported by Frappe API Handler'.format(method_name))
+        raise NotImplementedError(
+            f'Method name {method_name} not supported by Frappe API Handler'
+        )

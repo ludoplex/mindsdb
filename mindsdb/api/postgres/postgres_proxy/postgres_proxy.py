@@ -71,11 +71,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             Sync: self.sync
         }
         self.client_buffer = PostgresPacketReader(self.rfile)
-        if self.is_cloud:
-            # We already have a connection started through the gateway.
-            started = True
-        else:
-            started = self.start_connection()
+        started = True if self.is_cloud else self.start_connection()
         if started:
             self.logger.debug("connection started")
             self.send_initial_data()
@@ -267,20 +263,20 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return self.return_executor_data(executor)
 
     def return_executor_data(self, executor):
-        if executor.data is None:
-            resp = SQLAnswer(
+        return (
+            SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
-        else:
-            resp = SQLAnswer(
+            if executor.data is None
+            else SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
                 columns=executor.to_postgres_columns(executor.columns),
                 data=executor.data,
-                status=executor.server_status
+                status=executor.server_status,
             )
-        return resp
+        )
 
     def start_connection(self):
         self.logger.debug("starting handshake")
@@ -289,7 +285,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return self.authenticate()
 
     def send(self, message: PostgresMessage):
-        self.logger.debug("Sending message of type %s" % message.__class__.__name__)
+        self.logger.debug(f"Sending message of type {message.__class__.__name__}")
         message.send(self.wfile)
 
     def handshake(self):
@@ -331,7 +327,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         command = self.get_command(sql)
         if command == "BEGIN":
             self.transaction_status = b'T'
-        if command == "COMMIT":
+        elif command == "COMMIT":
             self.transaction_status = b'I'
         if command == "CREATE":
             command = "SELECT"
@@ -357,7 +353,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             self.send(RowDescriptions(fields=fields))
         self.send(DataRow(rows=rows))
         encoding = self.get_encoding()
-        tag = ('SELECT %s' % str(len(rows))).encode(encoding)
+        tag = f'SELECT {len(rows)}'.encode(encoding)
         self.send(CommandComplete(tag=tag))
         return True
 
@@ -374,10 +370,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return True
 
     def respond_from_sql_answer(self, sql, sql_answer: SQLAnswer, row_descs=True) -> bool:
-        # TODO Add command complete passthrough for Complex Queries that exceed row limit in one go
-        rows = 0
-        if sql_answer.data:
-            rows = len(sql_answer.data)
+        rows = len(sql_answer.data) if sql_answer.data else 0
         if RESPONSE_TYPE.OK == sql_answer.type:
             return self.return_ok(sql, rows=rows)
         elif RESPONSE_TYPE.TABLE == sql_answer.type:
@@ -387,16 +380,12 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
 
     @staticmethod
     def to_postgres_fields(columns: Iterable[Dict[str, Any]]) -> Sequence[PostgresField]:
-        fields = []
-        i = 0
-        for column in columns:
-            fields.append(GenericField(
-                name=column['name'],
-                object_id=column['type'].value,
-                column_id=i
-            ))
-            i += 1
-        return fields
+        return [
+            GenericField(
+                name=column['name'], object_id=column['type'].value, column_id=i
+            )
+            for i, column in enumerate(columns)
+        ]
 
     def to_postgres_rows(self, rows: Iterable[Iterable[Any]]) -> Sequence[Sequence[bytes]]:
         p_rows = []
@@ -405,11 +394,11 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             for column in row:
                 if column is None:
                     column = ""
-                elif type(column) == int or type(column) == float:
+                elif type(column) in [int, float]:
                     column = str(column)
-                elif type(column) == list or type(column) == dict:
+                elif type(column) in [list, dict]:
                     column = json.dumps(column)
-                if isinstance(column, datetime.date) or isinstance(column, datetime.datetime):
+                if isinstance(column, (datetime.date, datetime.datetime)):
                     try:
                         column = datetime.datetime.strftime(column, '%Y-%m-%d')
                     except ValueError:
@@ -418,10 +407,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                         except ValueError:
                             column = datetime.datetime.strptime(column, '%Y-%m-%dT%H:%M:%S.%f')
                 if isinstance(column, bool):
-                    if column:
-                        column = "true"
-                    else:
-                        column = "false"
+                    column = "true" if column else "false"
                 p_row.append(column.encode(encoding=self.charset))
             p_rows.append(p_row)
         return p_rows
@@ -456,7 +442,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                 if not res:
                     break
             else:
-                self.logger.warning("Ignoring unsupported message type %s" % tof)
+                self.logger.warning(f"Ignoring unsupported message type {tof}")
 
     @staticmethod
     def startProxy():

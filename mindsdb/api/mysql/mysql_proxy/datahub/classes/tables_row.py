@@ -58,12 +58,8 @@ class TablesRow:
     @staticmethod
     def from_dict(data: dict):
 
-        del_keys = []
         data = {k.upper(): v for k, v in data.items()}
-        for key in data:
-            if key not in TablesRow.columns:
-                del_keys.append(key)
-
+        del_keys = [key for key in data if key not in TablesRow.columns]
         for key in del_keys:
             del data[key]
 

@@ -30,12 +30,7 @@ class ConfluenceSpacesTable(APITable):
         """
         conditions = extract_comparison_conditions(query.where)
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 50
-
-
+        total_results = query.limit.value if query.limit else 50
         spaces_kwargs = {}
         order_by_conditions = {}
 
@@ -45,38 +40,36 @@ class ConfluenceSpacesTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "":
-                    next    
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
+                    next
+                if an_order.field.parts[1] not in self.get_columns():
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
+                order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
+                else:
+                    order_by_conditions["ascending"].append(False)
         for a_where in conditions:
-            if a_where[1] == "type":
-                if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for type")
-                if a_where[2] not in ["personal", "global"]:
-                    raise ValueError(
-                        f"Unsupported where argument for state {a_where[2]}"
-                    )
-                spaces_kwargs["type"] = a_where[2]
-            else:
+            if a_where[1] != "type":
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
+            if a_where[0] != "=":
+                raise ValueError("Unsupported where operation for type")
+            if a_where[2] not in ["personal", "global"]:
+                raise ValueError(
+                    f"Unsupported where argument for state {a_where[2]}"
+                )
+            spaces_kwargs["type"] = a_where[2]
         confluence_spaces_records = self.handler.connect().get_all_spaces(start=0,limit=total_results)
         confluence_spaces_df = pd.json_normalize(confluence_spaces_records["results"])
         confluence_spaces_df = confluence_spaces_df[self.get_columns()]
 
         if "type" in spaces_kwargs:
             confluence_spaces_df = confluence_spaces_df[confluence_spaces_df.type == spaces_kwargs["type"]]
-        
+
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):

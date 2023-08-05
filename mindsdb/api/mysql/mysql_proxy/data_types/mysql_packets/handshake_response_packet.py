@@ -50,7 +50,7 @@ class HandshakeResponsePacket(Packet):
 
         buffer = body
 
-        if len(body) == 32 and body[9:] == (b'\x00' * 23):
+        if len(buffer) == 32 and buffer[9:] == b'\x00' * 23:
             self.type = 'SSLRequest'
             buffer = self.capabilities.setFromBuff(buffer)
             buffer = self.max_packet_size.setFromBuff(buffer)
@@ -65,11 +65,11 @@ class HandshakeResponsePacket(Packet):
             buffer = self.username.setFromBuff(buffer)
 
             if server_capabilities.has(CAPABILITIES.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA) \
-                    and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA:
+                        and capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA:
                 self.enc_password = Datum('string<lenenc>')
                 buffer = self.enc_password.setFromBuff(buffer)
             elif server_capabilities.has(CAPABILITIES.CLIENT_SECURE_CONNECTION) \
-                    and capabilities.SECURE_CONNECTION:
+                        and capabilities.SECURE_CONNECTION:
                 self.auth_resp_len = Datum('int<1>')
                 buffer = self.auth_resp_len.setFromBuff(buffer)
                 self.enc_password = Datum(f'string<{self.auth_resp_len.value}>')

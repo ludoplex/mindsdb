@@ -52,18 +52,16 @@ class GetConfig(Resource):
     def put(self):
         data = request.json
 
-        unknown_argumens = list(set(data.keys()) - {'auth'})
-        if len(unknown_argumens) > 0:
+        if unknown_argumens := list(set(data.keys()) - {'auth'}):
             return http_error(
                 400, 'Wrong arguments',
                 f'Unknown argumens: {unknown_argumens}'
             )
 
         for key in data.keys():
-            unknown_argumens = list(
+            if unknown_argumens := list(
                 set(data[key].keys()) - set(Config()[key].keys())
-            )
-            if len(unknown_argumens) > 0:
+            ):
                 return http_error(
                     400, 'Wrong arguments',
                     f'Unknown argumens: {unknown_argumens}'
@@ -79,7 +77,9 @@ class GetConfig(Resource):
 class ListIntegration(Resource):
     def get(self):
         return {
-            'integrations': [k for k in ca.integration_controller.get_all(sensitive_info=False)]
+            'integrations': list(
+                ca.integration_controller.get_all(sensitive_info=False)
+            )
         }
 
 
@@ -88,8 +88,7 @@ class ListIntegration(Resource):
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
-        integrations = ca.integration_controller.get_all(sensitive_info=False)
-        return integrations
+        return ca.integration_controller.get_all(sensitive_info=False)
 
 
 @ns_conf.route('/integrations/<name>')
@@ -106,10 +105,10 @@ class Integration(Resource):
     @ns_conf.doc('put_integration')
     def put(self, name):
         params = {}
-        params.update((request.json or {}).get('params', {}))
+        params |= (request.json or {}).get('params', {})
         params.update(request.form or {})
 
-        if len(params) == 0:
+        if not params:
             abort(400, "type of 'params' must be dict")
 
         files = request.files
@@ -125,8 +124,7 @@ class Integration(Resource):
                 file.save(file_path)
                 params[key] = file_path
 
-        is_test = params.get('test', False)
-        if is_test:
+        if is_test := params.get('test', False):
             del params['test']
 
             handler_type = params.pop('type', None)
@@ -176,7 +174,7 @@ class Integration(Resource):
     @ns_conf.doc('modify_integration')
     def post(self, name):
         params = {}
-        params.update((request.json or {}).get('params', {}))
+        params |= (request.json or {}).get('params', {})
         params.update(request.form or {})
 
         if not isinstance(params, dict):
@@ -210,16 +208,8 @@ class Check(Resource):
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
-        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
-            telemtry = False
-        else:
-            telemtry = True
-
-        if ca.config_obj.get('disable_mongo', False):
-            mongo = False
-        else:
-            mongo = True
-
+        telemtry = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false']
+        mongo = not ca.config_obj.get('disable_mongo', False)
         cloud = ca.config_obj.get('cloud', False)
         local_time = datetime.datetime.now(tzlocal())
         local_timezone = local_time.tzname()

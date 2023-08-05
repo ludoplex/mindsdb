@@ -93,9 +93,9 @@ class OracleHandler(DatabaseHandler):
             log.logger.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success and need_to_close:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if not response.success and self.is_connected is True:
                 self.is_connected = False
         return response
 
@@ -111,8 +111,7 @@ class OracleHandler(DatabaseHandler):
         with connection.cursor() as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
-                if result:
+                if result := cur.fetchall():
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -132,7 +131,7 @@ class OracleHandler(DatabaseHandler):
                 )
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -167,8 +166,7 @@ class OracleHandler(DatabaseHandler):
             FROM USER_TAB_COLUMNS
             WHERE table_name = '{table_name}'
         """
-        result = self.native_query(query)
-        return result
+        return self.native_query(query)
 
 
 connection_args = OrderedDict(

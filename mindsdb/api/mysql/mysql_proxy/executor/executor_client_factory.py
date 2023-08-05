@@ -15,7 +15,7 @@ class ExecutorClientFactory:
             try:
                 from mindsdb.api.mysql.mysql_proxy.executor.executor_grpc_client import ExecutorClientGRPC
                 self.client_class = ExecutorClientGRPC
-            except (ImportError, ModuleNotFoundError):
+            except ImportError:
                 logger.error("to use microservice mode please install 'pip install mindsdb[grpc]'")
                 self.host = None
                 self.port = None

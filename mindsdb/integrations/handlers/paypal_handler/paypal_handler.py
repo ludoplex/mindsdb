@@ -73,7 +73,7 @@ class PayPalHandler(APIHandler):
             connection.get_access_token()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to PayPal!')
+            log.logger.error('Error connecting to PayPal!')
             response.error_message = str(e)
 
         self.is_connected = response.success

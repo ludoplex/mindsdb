@@ -169,11 +169,7 @@ class Executor:
         # Check if execute external here
         self.parse(sql)
         params = planner_utils.get_query_params(self.query)
-        if len(params) == 0:
-            pass
-        #    self.do_execute()
-        #    return True
-        else:
+        if len(params) != 0:
             # plan query
 
             sqlquery = SQLQuery(self.query, session=self.session, execute=False)

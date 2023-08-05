@@ -101,8 +101,8 @@ class InfluxDBHandler(APIHandler):
         url = f"{self.connection_data['influxdb_url']}/query"
 
         params = {
-            ('db',f"{self.connection_data['influxdb_db_name']}"),
-            ('q','SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}" )
+            ('db', f"{self.connection_data['influxdb_db_name']}"),
+            ('q', f"SELECT * FROM {self.connection_data['influxdb_table_name']}"),
         }
         headers = {
             "Authorization": f"Token {self.connection_data['influxdb_token']}",
@@ -110,6 +110,4 @@ class InfluxDBHandler(APIHandler):
         }
 
         response = requests.request("GET",url,params=params,headers=headers)
-        influxdb_df = pd.read_csv(io.StringIO(response.text))
-
-        return influxdb_df
+        return pd.read_csv(io.StringIO(response.text))

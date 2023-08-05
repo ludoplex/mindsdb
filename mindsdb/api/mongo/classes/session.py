@@ -7,7 +7,7 @@ class Session():
     def __init__(self, server_mindsdb_env):
         self.config = server_mindsdb_env['config']
         self.mindsdb_env = {'company_id': None}
-        self.mindsdb_env.update(server_mindsdb_env)
+        self.mindsdb_env |= server_mindsdb_env
 
     def init_scram(self, method):
         self.scram = Scram(method=method, get_salted_password=self.get_salted_password)

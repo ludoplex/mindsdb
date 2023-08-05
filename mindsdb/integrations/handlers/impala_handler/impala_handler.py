@@ -79,9 +79,9 @@ class ImpalaHandler(DatabaseHandler):
             log.error(f'x x x Error connecting to Impala {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
-        if result.success is True and need_to_close:
+        if result.success and need_to_close:
             self.disconnect()
-        if result.success is False and self.is_connected is True:
+        if not result.success and self.is_connected is True:
             self.is_connected = False
 
         return result
@@ -101,7 +101,7 @@ class ImpalaHandler(DatabaseHandler):
                 cur.execute(query)
                 result = cur.fetchall()
                 if cur.has_result_set:
-                    
+
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         pd.DataFrame(
@@ -120,7 +120,7 @@ class ImpalaHandler(DatabaseHandler):
                 )
                 # connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response

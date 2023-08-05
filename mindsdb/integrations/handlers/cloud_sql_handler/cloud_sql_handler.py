@@ -37,18 +37,30 @@ class CloudSQLHandler(DatabaseHandler):
 
         if self.connection_data['db_engine'] == 'mysql':
             self.db = MySQLHandler(
-                name=name + 'mysql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=f'{name}mysql',
+                connection_data={
+                    key: self.connection_data[key]
+                    for key in self.connection_data
+                    if key != 'db_engine'
+                },
             )
         elif self.connection_data['db_engine'] == 'postgresql':
             self.db = PostgresHandler(
-                name=name + 'postgresql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=f'{name}postgresql',
+                connection_data={
+                    key: self.connection_data[key]
+                    for key in self.connection_data
+                    if key != 'db_engine'
+                },
             )
         elif self.connection_data['db_engine'] == 'mssql':
             self.db = SqlServerHandler(
-                name=name + 'mssql',
-                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+                name=f'{name}mssql',
+                connection_data={
+                    key: self.connection_data[key]
+                    for key in self.connection_data
+                    if key != 'db_engine'
+                },
             )
         else:
             raise Exception("The database engine should be either MySQL, PostgreSQL or SQL Server!")

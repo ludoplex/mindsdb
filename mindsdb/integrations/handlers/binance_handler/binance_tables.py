@@ -81,32 +81,29 @@ class BinanceAggregatedTradesTable(APITable):
             'limit': BinanceAggregatedTradesTable.DEFAULT_AGGREGATE_TRADE_LIMIT
         }
         for op, arg1, arg2 in conditions:
-            if arg1 == 'interval':
-                if op != '=':
-                    raise NotImplementedError
+            if arg1 == 'interval' and op == '=':
                 params['interval'] = arg2
 
+            elif arg1 == 'interval' or arg1 == 'symbol' and op != '=':
+                raise NotImplementedError
             elif arg1 == 'symbol':
-                if op != '=':
-                    raise NotImplementedError
                 params['symbol'] = arg2
         interval_duration_ms = interval_str_to_duration_ms(params['interval'])
 
         for op, arg1, arg2 in conditions:
-            if arg1 == 'open_time':
-                utc_timestamp_ms = utc_date_str_to_timestamp_ms(arg2)
-                if op == '>':
-                    params['start_time'] = utc_timestamp_ms
-                else:
-                    raise NotImplementedError
-                continue
-            elif arg1 == 'close_time':
+            if arg1 == 'close_time':
                 utc_timestamp_ms = utc_date_str_to_timestamp_ms(arg2)
                 if op == '<':
                     params['end_time'] = utc_timestamp_ms - interval_duration_ms
                 else:
                     raise NotImplementedError
 
+            elif arg1 == 'open_time':
+                utc_timestamp_ms = utc_date_str_to_timestamp_ms(arg2)
+                if op == '>':
+                    params['start_time'] = utc_timestamp_ms
+                else:
+                    raise NotImplementedError
         return params
 
     def select(self, query: ast.Select) -> pd.DataFrame:

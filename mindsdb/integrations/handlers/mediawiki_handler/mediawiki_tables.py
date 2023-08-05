@@ -76,11 +76,9 @@ class PagesTable(APITable):
         query_parts.append(f'intitle:{title}') if title is not None else None
         query_parts.append(f'pageid:{page_id}') if page_id is not None else None
 
-        search_query = ' | '.join(query_parts)
-
         connection = self.handler.connect()
 
-        if search_query:
+        if search_query := ' | '.join(query_parts):
             return [self.convert_page_to_dict(connection.page(result, auto_suggest=False)) for result in connection.search(search_query, results=limit)]
         else:
             return [self.convert_page_to_dict(connection.page(result, auto_suggest=False)) for result in connection.random(pages=limit)]

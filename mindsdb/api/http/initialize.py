@@ -104,20 +104,22 @@ def get_last_compatible_gui_version() -> LooseVersion:
             if max_gui_lv is None or max_gui_lv < gui_lv:
                 max_gui_lv = gui_lv
 
-        all_mindsdb_lv = [LooseVersion(x) for x in gui_versions.keys()]
+        all_mindsdb_lv = [LooseVersion(x) for x in gui_versions]
         all_mindsdb_lv.sort()
 
         if current_mindsdb_lv.vstring in gui_versions:
             gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
         elif current_mindsdb_lv > all_mindsdb_lv[-1]:
             gui_version_lv = max_gui_lv
+        elif lower_versions := {
+            key: value
+            for key, value in gui_versions.items()
+            if LooseVersion(key) < current_mindsdb_lv
+        }:
+            all_lower_versions = [LooseVersion(x) for x in lower_versions]
+            gui_version_lv = gui_versions[all_lower_versions[-1].vstring]
         else:
-            lower_versions = {key: value for key, value in gui_versions.items() if LooseVersion(key) < current_mindsdb_lv}
-            if len(lower_versions) == 0:
-                gui_version_lv = gui_versions[all_mindsdb_lv[0].vstring]
-            else:
-                all_lower_versions = [LooseVersion(x) for x in lower_versions.keys()]
-                gui_version_lv = gui_versions[all_lower_versions[-1].vstring]
+            gui_version_lv = gui_versions[all_mindsdb_lv[0].vstring]
     except Exception as e:
         logger.error(f'Error in compatible-config.json structure: {e}')
         return False
@@ -134,9 +136,11 @@ def get_current_gui_version() -> LooseVersion:
         with open(version_txt_path, 'rt') as f:
             current_gui_version = f.readline()
 
-    current_gui_lv = None if current_gui_version is None else LooseVersion(current_gui_version)
-
-    return current_gui_lv
+    return (
+        None
+        if current_gui_version is None
+        else LooseVersion(current_gui_version)
+    )
 
 
 def initialize_static():
@@ -369,9 +373,9 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     inject_telemetry_to_static(static_folder)
     logger = get_log('http')
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15,
-                                           pid=pid, port=port)
-        if is_http_active:
+        if is_http_active := wait_func_is_true(
+            func=is_pid_listen_port, timeout=15, pid=pid, port=port
+        ):
             webbrowser.open(url)
     except Exception as e:
         logger.error(f'Failed to open {url} in webbrowser with exception {e}')

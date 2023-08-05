@@ -85,7 +85,7 @@ def format_categorical_preds(predictions, original_y, df_to_predict, target_col)
 
     # Add the confidence score next to the prediction
     df_to_predict[target_col] = pd.Series(preds).astype(original_y.dtype)
-    df_to_predict["confidence"] = [max(row) for _, row in enumerate(predictions)]
+    df_to_predict["confidence"] = [max(row) for row in predictions]
     return df_to_predict
 
 

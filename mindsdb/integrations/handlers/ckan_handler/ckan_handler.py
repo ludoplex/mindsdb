@@ -62,7 +62,7 @@ class CkanHandler(DatabaseHandler):
             self.is_connected = False
             response.error_message = e
 
-        if response.success is False and self.is_connected is True:
+        if response.success is False and self.is_connected:
             self.is_connected = False
 
         response.success = True
@@ -83,17 +83,14 @@ class CkanHandler(DatabaseHandler):
         if not self.ckan:
             self.connect()
         result = self.ckan.action.datastore_search_sql(sql=query_str)
-        if len(result.get('records')) > 0:
-            df = pd.DataFrame(result['records'])
-            response = HandlerResponse(RESPONSE_TYPE.TABLE, df)
-        else:
-            response = HandlerResponse(RESPONSE_TYPE.TABLE, None)
-        return response
+        if len(result.get('records')) <= 0:
+            return HandlerResponse(RESPONSE_TYPE.TABLE, None)
+        df = pd.DataFrame(result['records'])
+        return HandlerResponse(RESPONSE_TYPE.TABLE, df)
 
     def get_tables(self) -> HandlerResponse:
         if not self.ckan:
             self.connect()
         result = self.ckan.action.datastore_search(resource_id='_table_metadata')
         df = pd.DataFrame(result['records'])
-        response = HandlerResponse(RESPONSE_TYPE.TABLE, df)
-        return response
+        return HandlerResponse(RESPONSE_TYPE.TABLE, df)

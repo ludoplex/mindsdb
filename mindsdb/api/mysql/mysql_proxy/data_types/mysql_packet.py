@@ -49,8 +49,7 @@ class Packet:
         body = self.body
         len_header = struct.pack('<i', self.length)[:3]  # keep it 3 bytes
         count_header = struct.pack('B', self.seq)
-        packet = len_header + count_header + body
-        return packet
+        return len_header + count_header + body
 
     def get(self):
         self.session.logging.debug(f'Get packet: {self.__class__.__name__}')
@@ -63,7 +62,6 @@ class Packet:
             if len(packet_string) < 4:
                 self.session.logging.warning(f'Packet with less than 4 bytes in length: {packet_string}')
                 return False
-                break
             len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
             count_header = int(packet_string[3])
             if len_header == 0:
@@ -89,16 +87,13 @@ class Packet:
     def pprintPacket(self, body=None):
         if body is None:
             body = self.body
-        print(str(self))
+        print(self)
+        part = '[BODY]'
         for i, x in enumerate(body):
-            part = '[BODY]'
             print('''{part}{i}:{h} ({inte}:{actual})'''.format(part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)))
 
     def isEOF(self):
-        if self.length == 0:
-            return True
-        else:
-            return False
+        return self.length == 0
 
     @property
     def length(self):
