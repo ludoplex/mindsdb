@@ -29,7 +29,7 @@ class InfluxDBTables(APITable):
         """
         conditions = extract_comparison_conditions(query.where)
 
-       
+
         order_by_conditions = {}
 
         if query.order_by and len(query.order_by) > 0:
@@ -38,19 +38,18 @@ class InfluxDBTables(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "":
-                    next    
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
+                    next
+                if an_order.field.parts[1] not in self.get_columns():
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
+                order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
+                else:
+                    order_by_conditions["ascending"].append(False)
         influxdb_tables_df = self.handler.call_influxdb_tables()
 
         selected_columns = []

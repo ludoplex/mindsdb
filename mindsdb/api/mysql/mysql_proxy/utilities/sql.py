@@ -31,8 +31,9 @@ def query_df(df, query, session=None):
     else:
         query_ast = copy.deepcopy(query)
 
-    if isinstance(query_ast, Select) is False \
-       or isinstance(query_ast.from_table, Identifier) is False:
+    if not isinstance(query_ast, Select) or not isinstance(
+        query_ast.from_table, Identifier
+    ):
         raise Exception(
             "Only 'SELECT from TABLE' statements supported for internal query"
         )
@@ -52,10 +53,7 @@ def query_df(df, query, session=None):
         if isinstance(node, Function):
             fnc_name = node.op.lower()
             if fnc_name == 'database' and len(node.args) == 0:
-                if session is not None:
-                    cur_db = session.database
-                else:
-                    cur_db = None
+                cur_db = session.database if session is not None else None
                 return Constant(cur_db)
             if fnc_name == 'truncate':
                 # replace mysql 'truncate' function to duckdb 'round'
@@ -71,12 +69,13 @@ def query_df(df, query, session=None):
     encoder = CustomJSONEncoder()
 
     def _convert(v):
-        if isinstance(v, dict) or isinstance(v, list):
+        if isinstance(v, (dict, list)):
             try:
                 return encoder.encode(v)
             except Exception:
                 pass
         return v
+
     for column in json_columns:
         df[column] = df[column].apply(_convert)
 

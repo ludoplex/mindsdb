@@ -115,9 +115,9 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
             log.logger.error(f"Error connecting to ChromaDB , {e}!")
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected is True:
                 self.is_connected = False
 
         return responseCode
@@ -135,27 +135,25 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         where = {}
         if query.where.op == "and":
             for arg in query.where.args:
-                if arg.op == "=":
-
-                    if arg.args[0].parts[-1] == "meta_data_filter":
-                        # filters on metadata
-                        where["meta_data_filter"] = get_metadata_filter(
-                            arg.args[1].value
-                        )
-
-                    elif arg.args[0].parts[-1] == "search_query":
-                        # extract the search query
-                        where["search_query"] = arg.args[1].value
-                    else:
-                        raise NotImplementedError(
-                            f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
-                            f"only 'meta_data_filter' and 'search_query' are supported"
-                        )
-                else:
+                if arg.op != "=":
                     raise NotImplementedError(
                         f"Unsupported where clause {arg.op} operator, only '=' is supported"
                     )
 
+                if arg.args[0].parts[-1] == "meta_data_filter":
+                    # filters on metadata
+                    where["meta_data_filter"] = get_metadata_filter(
+                        arg.args[1].value
+                    )
+
+                elif arg.args[0].parts[-1] == "search_query":
+                    # extract the search query
+                    where["search_query"] = arg.args[1].value
+                else:
+                    raise NotImplementedError(
+                        f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
+                        f"only 'meta_data_filter' and 'search_query' are supported"
+                    )
         elif query.where.op == "=":
             # requires separate handling as the where clause is not a list when single condition
             if query.where.args[0].parts[-1] == "meta_data_filter":

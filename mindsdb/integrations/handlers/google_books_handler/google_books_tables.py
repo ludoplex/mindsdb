@@ -32,10 +32,16 @@ class VolumesTable(APITable):
         for op, arg1, arg2 in conditions:
             if op != '=':
                 raise NotImplementedError
-            if arg1 == 'q' or arg1 == 'download' or arg1 == 'langRestrict' \
-                    or arg1 == 'printType'\
-                    or arg1 == 'source' or arg1 == 'partner' \
-                    or arg1 == 'showPreorders' or arg1 == 'startIndex':
+            if arg1 in [
+                'q',
+                'download',
+                'langRestrict',
+                'printType',
+                'source',
+                'partner',
+                'showPreorders',
+                'startIndex',
+            ]:
                 params[arg1] = arg2
             elif arg1 == 'filter':
                 if arg2 not in ['ebooks', 'free-ebooks', 'full', 'paid-ebooks', 'partial']:
@@ -43,10 +49,6 @@ class VolumesTable(APITable):
                 params[arg1] = arg2
             elif arg1 == 'libraryRestrict':
                 if arg2 not in ['my-library', 'no-restrictions']:
-                    raise NotImplementedError
-                params[arg1] = arg2
-            elif arg1 == 'printType':
-                if arg2 not in ['all', 'books', 'magazines']:
                     raise NotImplementedError
                 params[arg1] = arg2
             elif arg1 == 'projection':
@@ -70,7 +72,7 @@ class VolumesTable(APITable):
 
         # Get the volumes from the Google Books API.
         bookshelves = self.handler.\
-            call_application_api(method_name='get_volumes', params=params)
+                call_application_api(method_name='get_volumes', params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -131,17 +133,17 @@ class BookshelvesTable(APITable):
         # Get the parameters for the request.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'userId' or arg1 == 'source' or arg1 == 'fields':
+            if arg1 in ['userId', 'source', 'fields']:
                 if op != '=':
                     raise NotImplementedError
                 params[arg1] = arg2
             elif arg1 == 'shelf':
-                if op == '=':
+                if op == '<':
+                    params['maxShelf'] = arg2
+                elif op == '=':
                     params[arg1] = arg2
                 elif op == '>':
                     params['minShelf'] = arg2
-                elif op == '<':
-                    params['maxShelf'] = arg2
                 else:
                     raise NotImplementedError
             else:
@@ -149,7 +151,7 @@ class BookshelvesTable(APITable):
 
         # Get the bookshelves from the Google Books API.
         bookshelves = self.handler.\
-            call_application_api(method_name='get_bookshelves', params=params)
+                call_application_api(method_name='get_bookshelves', params=params)
 
         selected_columns = []
         for target in query.targets:

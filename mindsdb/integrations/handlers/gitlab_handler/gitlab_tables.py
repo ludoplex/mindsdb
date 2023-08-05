@@ -25,11 +25,7 @@ class GitlabIssuesTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
-
+        total_results = query.limit.value if query.limit else 20
         issues_kwargs = {}
         order_by_conditions = {}
 
@@ -38,18 +34,17 @@ class GitlabIssuesTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
+                if an_order.field.parts[1] not in self.get_columns():
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
+                order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
+                else:
+                    order_by_conditions["ascending"].append(False)
         for a_where in conditions:
             if a_where[1] == "state":
                 if a_where[0] != "=":
@@ -69,14 +64,13 @@ class GitlabIssuesTable(APITable):
                 issues_kwargs["labels"] = a_where[2].split(",")
 
                 continue
-            if a_where[1] in ["assignee", "creator"]:
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
-
-                issues_kwargs[a_where[1]] = a_where[2]
-            else:
+            if a_where[1] not in ["assignee", "creator"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
+            if a_where[0] != "=":
+                raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+            issues_kwargs[a_where[1]] = a_where[2]
         self.handler.connect()
 
         gitlab_issues_df = pd.DataFrame(columns=self.get_columns())
@@ -106,9 +100,7 @@ class GitlabIssuesTable(APITable):
                                         "closed_by": issue.closed_by
                                         if issue.closed_by
                                         else None,
-                                        "labels": ",".join(
-                                            [label for label in issue.labels]
-                                        ),
+                                        "labels": ",".join(list(issue.labels)),
                                         "assignees": ",".join(
                                             [
                                                 assignee["name"]
@@ -130,11 +122,7 @@ class GitlabIssuesTable(APITable):
             except IndexError:
                 break
 
-            if gitlab_issues_df.shape[0] >= total_results:
-                break
-            else:
-                break
-
+            break
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
@@ -197,11 +185,7 @@ class GitlabMergeRequestsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
-
+        total_results = query.limit.value if query.limit else 20
         merge_requests_kwargs = {}
         order_by_conditions = {}
 
@@ -210,18 +194,17 @@ class GitlabMergeRequestsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
+                if an_order.field.parts[1] not in self.get_columns():
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
+                order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
+                else:
+                    order_by_conditions["ascending"].append(False)
         for a_where in conditions:
             if a_where[1] == "state":
                 if a_where[0] != "=":
@@ -241,14 +224,13 @@ class GitlabMergeRequestsTable(APITable):
                 merge_requests_kwargs["labels"] = a_where[2].split(",")
 
                 continue
-            if a_where[1] in ["target_branch", "source_branch"]:
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
-
-                merge_requests_kwargs[a_where[1]] = a_where[2]
-            else:
+            if a_where[1] not in ["target_branch", "source_branch"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
+            if a_where[0] != "=":
+                raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+            merge_requests_kwargs[a_where[1]] = a_where[2]
         self.handler.connect()
 
         gitlab_merge_requests_df = pd.DataFrame(columns=self.get_columns())
@@ -278,11 +260,13 @@ class GitlabMergeRequestsTable(APITable):
                                         "closed_by": merge_request.closed_by
                                         if merge_request.closed_by
                                         else None,
-                                        "mergeed_by": merge_request.merge_user["name"]
+                                        "mergeed_by": merge_request.merge_user[
+                                            "name"
+                                        ]
                                         if merge_request.merge_user
                                         else None,
                                         "labels": ",".join(
-                                            [label for label in merge_request.labels]
+                                            list(merge_request.labels)
                                         ),
                                         "assignees": ",".join(
                                             [
@@ -303,7 +287,9 @@ class GitlabMergeRequestsTable(APITable):
                                         "downvotes": merge_request.downvotes,
                                         "draft": merge_request.draft,
                                         "work_in_progress": merge_request.work_in_progress,
-                                        "milestone": merge_request.milestone["state"]
+                                        "milestone": merge_request.milestone[
+                                            "state"
+                                        ]
                                         if merge_request.milestone
                                         else None,
                                         "merge_status": merge_request.merge_status,
@@ -326,11 +312,7 @@ class GitlabMergeRequestsTable(APITable):
             except IndexError:
                 break
 
-            if gitlab_merge_requests_df.shape[0] >= total_results:
-                break
-            else:
-                break
-
+            break
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):

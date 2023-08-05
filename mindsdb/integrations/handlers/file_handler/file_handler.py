@@ -27,9 +27,7 @@ from mindsdb.integrations.libs.response import (
 
 
 def clean_cell(val):
-    if str(val) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
-        return None
-    return val
+    return None if str(val) in {'', ' ', '  ', 'NaN', 'nan', 'NA'} else val
 
 
 class FileHandler(DatabaseHandler):
@@ -127,7 +125,7 @@ class FileHandler(DatabaseHandler):
         df = df.applymap(clean_cell)
 
         header = [x.strip() for x in header]
-        col_map = dict((col, col) for col in header)
+        col_map = {col: col for col in header}
         return df, col_map
 
     @staticmethod
@@ -140,16 +138,15 @@ class FileHandler(DatabaseHandler):
         data.seek(-4, 2)
         end_meta = data.read()
         data.seek(0)
-        if start_meta == parquet_sig and end_meta == parquet_sig:
-            return True
-        return False
+        return start_meta == parquet_sig and end_meta == parquet_sig
 
     @staticmethod
     def is_it_xlsx(file_path: str) -> bool:
         file_type = magic.from_file(file_path, mime=True)
-        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
-            return True
-        return False
+        return file_type in [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+        ]
 
     @staticmethod
     def is_it_json(data_str: StringIO) -> bool:
@@ -296,12 +293,11 @@ class FileHandler(DatabaseHandler):
         temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_url_')
         try:
             r = requests.get(url, stream=True)
-            if r.status_code == 200:
-                with open(os.path.join(temp_dir, 'file'), 'wb') as f:
-                    for chunk in r:
-                        f.write(chunk)
-            else:
+            if r.status_code != 200:
                 raise Exception(f'Responce status code is {r.status_code}')
+            with open(os.path.join(temp_dir, 'file'), 'wb') as f:
+                for chunk in r:
+                    f.write(chunk)
         except Exception as e:
             print(f'Error during getting {url}')
             print(e)
@@ -325,13 +321,17 @@ class FileHandler(DatabaseHandler):
 
     def get_columns(self, table_name) -> Response:
         file_meta = self.file_controller.get_file_meta(table_name)
-        result = Response(
+        return Response(
             RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame([
-                {
-                    'Field': x['name'].strip() if isinstance(x, dict) else x.strip(),
-                    'Type': 'str'
-                } for x in file_meta['columns']
-            ])
+            data_frame=pd.DataFrame(
+                [
+                    {
+                        'Field': x['name'].strip()
+                        if isinstance(x, dict)
+                        else x.strip(),
+                        'Type': 'str',
+                    }
+                    for x in file_meta['columns']
+                ]
+            ),
         )
-        return result

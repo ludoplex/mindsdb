@@ -69,9 +69,7 @@ class BYOMHandler(BaseMLEngine):
 
         model_state = self.model_storage.file_get('model')
 
-        pred_df = model_proxy.predict(df, model_state, pred_args)
-
-        return pred_df
+        return model_proxy.predict(df, model_state, pred_args)
 
     def create_engine(self, connection_args):
         # check code and requirements
@@ -140,14 +138,13 @@ class ModelWrapper:
         pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'
         modules = []
         for line in requirements.split(b'\n'):
-            line = line.decode().strip()
-            if line:
+            if line := line.decode().strip():
                 if re.match(pattern, line):
                     modules.append(line)
                 else:
                     raise Exception(f'Wrong requirement: {line}')
 
-        is_pandas = any([m.lower().startswith('pandas') for m in modules])
+        is_pandas = any(m.lower().startswith('pandas') for m in modules)
         if not is_pandas:
             modules.append('pandas >=1.1.5,<=1.3.3')
 
@@ -205,8 +202,7 @@ class ModelWrapper:
             'args': args,
         }
 
-        model_state = self._run_command(params)
-        return model_state
+        return self._run_command(params)
 
     def predict(self, df, model_state, args):
 

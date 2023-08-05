@@ -46,8 +46,7 @@ class PingNative(Resource):
             if not processes_dir.is_dir():
                 continue
             clean_unlinked_process_marks()
-            process_marks = [x.name for x in processes_dir.iterdir()]
-            if len(process_marks) > 0:
+            if process_marks := [x.name for x in processes_dir.iterdir()]:
                 response[process_type] = True
 
         return response
@@ -65,7 +64,7 @@ class Telemetry(Resource):
     def post(self):
         data = request.json
         action = data['action']
-        if str(action).lower() in ["true", "enable", "on"]:
+        if str(action).lower() in {"true", "enable", "on"}:
             enable_telemetry(ca.config_obj['storage_dir'])
         else:
             disable_telemetry(ca.config_obj['storage_dir'])

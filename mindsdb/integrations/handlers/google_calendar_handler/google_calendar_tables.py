@@ -29,20 +29,14 @@ class GoogleCalendarEventsTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'timeMax' or arg1 == 'timeMin':
+            if arg1 in ['timeMax', 'timeMin']:
                 date = parse_utc_date(arg2)
                 if op == '=':
                     params[arg1] = date
                 else:
                     raise NotImplementedError
-            elif arg1 == 'timeZone':
+            elif arg1 in ['timeZone', 'maxAttendees', 'q']:
                 params[arg1] = arg2
-            elif arg1 == 'maxAttendees':
-                params[arg1] = arg2
-            elif arg1 == 'q':
-                params[arg1] = arg2
-           
-
         # Get the order by from the query.
         if query.order_by is not None:
             if query.order_by[0].value == 'start_time':
@@ -139,11 +133,21 @@ class GoogleCalendarEventsTable(APITable):
         # Get the event data from the values.
         event_data = {}
         for col, val in zip(query.update_columns, values):
-            if col == 'start_time' or col == 'end_time' or col == 'created' or col == 'updated':
+            if col in ['start_time', 'end_time', 'created', 'updated']:
                 event_data[col] = utc_date_str_to_timestamp_ms(val)
-            elif col == 'summary' or col == 'description' or col == 'location' or col == 'status' or col == 'html_link' \
-                    or col == 'creator' or col == 'organizer' or col == 'reminders' \
-                    or col == 'timeZone' or col == 'calendar_id' or col == 'attendees':
+            elif col in [
+                'summary',
+                'description',
+                'location',
+                'status',
+                'html_link',
+                'creator',
+                'organizer',
+                'reminders',
+                'timeZone',
+                'calendar_id',
+                'attendees',
+            ]:
                 event_data[col] = val
             else:
                 raise NotImplementedError
@@ -163,18 +167,14 @@ class GoogleCalendarEventsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
-            if arg1 == 'event_id':
-                if op == '=':
-                    event_data['event_id'] = arg2
-                elif op == '>':
-                    event_data['start_id'] = arg2
-                elif op == '<':
-                    event_data['end_id'] = arg2
-                else:
-                    raise NotImplementedError
+            if arg1 == 'event_id' and op == '<':
+                event_data['end_id'] = arg2
+            elif arg1 == 'event_id' and op == '=':
+                event_data['event_id'] = arg2
+            elif arg1 == 'event_id' and op == '>':
+                event_data['start_id'] = arg2
             else:
                 raise NotImplementedError
-
         # Update the event in the Google Calendar API.
         self.handler.call_application_api(method_name='update_event', params=event_data)
 

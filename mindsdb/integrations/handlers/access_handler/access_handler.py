@@ -94,9 +94,9 @@ class AccessHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success and need_to_close:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if not response.success and self.is_connected is True:
                 self.is_connected = False
 
         return response
@@ -116,8 +116,7 @@ class AccessHandler(DatabaseHandler):
         with connection.cursor() as cursor:
             try:
                 cursor.execute(query)
-                result = cursor.fetchall()
-                if result:
+                if result := cursor.fetchall():
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame.from_records(
@@ -136,7 +135,7 @@ class AccessHandler(DatabaseHandler):
                     error_message=str(e)
                 )
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -166,12 +165,7 @@ class AccessHandler(DatabaseHandler):
         with connection.cursor() as cursor:
             df = pd.DataFrame([table.table_name for table in cursor.tables(tableType='Table')], columns=['table_name'])
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -189,12 +183,7 @@ class AccessHandler(DatabaseHandler):
                 columns=['column_name', 'data_type']
             )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        return Response(RESPONSE_TYPE.TABLE, df)
 
 
 connection_args = OrderedDict(

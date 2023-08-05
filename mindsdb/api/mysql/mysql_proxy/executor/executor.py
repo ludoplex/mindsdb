@@ -136,50 +136,6 @@ class Executor:
         # not exec directly in integration
         return None
 
-        # try exec in external integration
-        if (
-            isinstance(self.session.database, str)
-            and len(self.session.database) > 0
-            and self.session.database.lower()
-            not in ("mindsdb", "files", "information_schema")
-            and "@@" not in sql.lower()
-            and (
-                (sql.lower().strip().startswith("select") and "from" in sql.lower())
-                or (
-                    sql.lower().strip().startswith("show")
-                    # and 'databases' in sql.lower()
-                    and "tables" in sql.lower()
-                )
-            )
-        ):
-            datanode = self.session.datahub.get(self.session.database)
-            if datanode is None:
-                raise ErBadDbError("Unknown database - %s" % self.session.database)
-
-            # try parse or send raw sql
-            try:
-                sql = parse_sql(sql, dialect="mindsdb")
-            except mindsdb_sql.exceptions.ParsingException:
-                pass
-
-            result, column_info = datanode.query(sql)
-            columns = [
-                Column(name=col["name"], type=col["type"]) for col in column_info
-            ]
-
-            data = []
-            if len(result) > 0:
-                # columns = [{
-                #     'table_name': '',
-                #     'name': x,
-                #     'type': TYPES.MYSQL_TYPE_VAR_STRING
-                # } for x in result[0].keys()]
-
-                data = [[str(value) for key, value in x.items()] for x in result]
-            self.columns = columns
-            self.data = data
-            return True
-
     @profiler.profile()
     def parse(self, sql):
         logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)

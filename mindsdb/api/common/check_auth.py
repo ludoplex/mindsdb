@@ -24,7 +24,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config, logg
                 'success': False
             }
 
-        if password != hardcoded_password and password != hardcoded_password_hash:
+        if password not in [hardcoded_password, hardcoded_password_hash]:
             logger.warning(f'check auth, user={username}: password mismatch')
             return {
                 'success': False

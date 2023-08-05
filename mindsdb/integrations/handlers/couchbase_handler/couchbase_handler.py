@@ -156,7 +156,7 @@ class CouchbaseHandler(DatabaseHandler):
                                 if data.get(k) is None: 
                                     data[k] = []
                                 data[k].append(v)
-            if len(data) > 0:
+            if data:
                 df = pd.DataFrame(data)
                 response = Response(
                     RESPONSE_TYPE.TABLE,
@@ -189,24 +189,18 @@ class CouchbaseHandler(DatabaseHandler):
 
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
- 
+
         collections = []
 
         for _scope in bucket.collections().get_all_scopes():
-                for __collections in _scope.collections:
-                    collections.append(__collections.name)
+            collections.extend(__collections.name for __collections in _scope.collections)
         collections_ar = [
             [i] for i in collections
         ]
-        
+
         df = pd.DataFrame(collections_ar, columns=['TABLE_NAME'])
-        
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-        
-        return response
+
+        return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name) -> Response:
         """ Returns a list of entity columns
@@ -232,8 +226,7 @@ class CouchbaseHandler(DatabaseHandler):
             # print(row_iter.execute())
             data = []
             for row in row_iter:   
-                for k, v in row[table_name].items():
-                    data.append([k, type(v).__name__])
+                data.extend([k, type(v).__name__] for k, v in row[table_name].items())
             df = pd.DataFrame(data, columns=['Field', 'Type'])
             response = Response(
                 RESPONSE_TYPE.TABLE,
@@ -245,7 +238,7 @@ class CouchbaseHandler(DatabaseHandler):
                     RESPONSE_TYPE.ERROR,
                     error_message=f'Error: {e.error_context.first_error_message}'
                 )
-                
+
         return response
 
 

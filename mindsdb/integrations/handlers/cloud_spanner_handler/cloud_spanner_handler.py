@@ -86,9 +86,9 @@ class CloudSpannerHandler(DatabaseHandler):
             )
             response.error_message = str(e)
         finally:
-            if response.success is True and self.is_connected:
+            if response.success and self.is_connected:
                 self.disconnect()
-            if response.success is False and self.is_connected:
+            if not response.success and self.is_connected:
                 self.is_connected = False
 
         return response
@@ -144,11 +144,7 @@ class CloudSpannerHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        query_str = query.to_string() if isinstance(query, ASTNode) else str(query)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

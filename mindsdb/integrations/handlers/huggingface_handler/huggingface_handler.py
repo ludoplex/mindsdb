@@ -77,7 +77,7 @@ class HuggingFaceHandler(BaseMLEngine):
             if key in input_keys:
                 input_keys.remove(key)
 
-        if len(input_keys) > 0:
+        if input_keys:
             raise Exception(f'Not expected parameters: {", ".join(input_keys)}')
 
     def create(self, target, args=None, **kwargs):
@@ -102,9 +102,7 @@ class HuggingFaceHandler(BaseMLEngine):
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                              tokenizer=hf_model_storage_path)
-            log.logger.debug(f'Model already downloaded!')
-        ####
-        # Otherwise download it
+            log.logger.debug('Model already downloaded!')
         except OSError:
             try:
                 log.logger.debug(f"Downloading {model_name}...")
@@ -131,12 +129,10 @@ class HuggingFaceHandler(BaseMLEngine):
         if 'labels' in args:
             for num in labels_default.keys():
                 labels_map[labels_default[num]] = args['labels'][num]
-            args['labels_map'] = labels_map
         else:
             for num in labels_default.keys():
                 labels_map[labels_default[num]] = labels_default[num]
-            args['labels_map'] = labels_map
-
+        args['labels_map'] = labels_map
         ###### store and persist in model folder
         self.model_storage.json_set('args', args)
 
@@ -148,18 +144,18 @@ class HuggingFaceHandler(BaseMLEngine):
 
         result = pipeline([item], top_k=top_k, truncation=True, max_length=args['max_length'])[0]
 
-        final = {}
         explain = {}
         if type(result) == dict:
             result = [result]
-        final[args['target']] = args['labels_map'][result[0]['label']]
         for elem in result:
             if args['labels_map']:
                 explain[args['labels_map'][elem['label']]] = elem['score']
             else:
                 explain[elem['label']] = elem['score']
-        final[f"{args['target']}_explain"] = explain
-        return final
+        return {
+            args['target']: args['labels_map'][result[0]['label']],
+            f"{args['target']}_explain": explain,
+        }
 
     def predict_zero_shot(self, pipeline, item, args):
         top_k = args.get('top_k', 1000)
@@ -167,47 +163,35 @@ class HuggingFaceHandler(BaseMLEngine):
         result = pipeline([item], candidate_labels=args['candidate_labels'],
                                      truncation=True, top_k=top_k, max_length=args['max_length'])[0]
 
-        final = {}
-        final[args['target']] = result['labels'][0]
-
         explain = dict(zip(result['labels'], result['scores']))
-        final[f"{args['target']}_explain"] = explain
-
-        return final
+        return {
+            args['target']: result['labels'][0],
+            f"{args['target']}_explain": explain,
+        }
 
     def predict_translation(self, pipeline, item, args):
         result = pipeline([item], max_length=args['max_length'])[0]
 
-        final = {}
-        final[args['target']] = result['translation_text']
-
-        return final
+        return {args['target']: result['translation_text']}
 
     def predict_summarization(self, pipeline, item, args):
         result = pipeline([item], min_length=args['min_output_length'], max_length=args['max_output_length'])[0]
 
-        final = {}
-        final[args['target']] = result['summary_text']
-
-        return final
+        return {args['target']: result['summary_text']}
 
     def predict_text2text(self, pipeline, item, args):
         result = pipeline([item], max_length=args['max_length'])[0]
 
-        final = {}
-        final[args['target']] = result['generated_text']
-
-        return final
+        return {args['target']: result['generated_text']}
 
     def predict_fill_mask(self, pipeline, item, args):
         result = pipeline([item])[0]
 
-        final = {}
-        final[args['target']] = result[0]['sequence']
         explain = {elem['sequence']: elem['score'] for elem in result}
-        final[f"{args['target']}_explain"] = explain
-
-        return final
+        return {
+            args['target']: result[0]['sequence'],
+            f"{args['target']}_explain": explain,
+        }
 
     def predict(self, df, args=None):
 
@@ -262,14 +246,12 @@ class HuggingFaceHandler(BaseMLEngine):
                 result = fnc(pipeline, item, args)
             except Exception as e:
                 msg = str(e).strip()
-                if msg == '':
+                if not msg:
                     msg = e.__class__.__name__
                 result = {'error': msg}
             results.append(result)
 
-        pred_df = pd.DataFrame(results)
-
-        return pred_df
+        return pd.DataFrame(results)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
 

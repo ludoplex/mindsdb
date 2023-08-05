@@ -115,7 +115,7 @@ class Responce(Responder):
             if isinstance(ast_query.from_table, Identifier):
                 table_name = ast_query.from_table.parts[-1].lower()
 
-                if table_name == 'models' or table_name == 'models_versions':
+                if table_name in ['models', 'models_versions']:
 
                     models = mindsdb_env['model_controller'].get_models(
                         ml_handler_name=None,
@@ -136,7 +136,7 @@ class Responce(Responder):
 
         data = run_sql_command(request_env, ast_query)
 
-        if table_name == 'models' or table_name == 'models_versions':
+        if table_name in ['models', 'models_versions']:
             # for models and models_versions _id is:
             #   - first 20 bytes is version
             #   - next bytes is model id

@@ -44,8 +44,7 @@ class MLflowHandler(BaseMLEngine):
                              data=df.to_json(orient='records'),
                              headers={'content-type': 'application/json; format=pandas-records'})
         answer = resp.json()
-        predictions = pd.DataFrame({args['target']: answer})
-        return predictions
+        return pd.DataFrame({args['target']: answer})
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         if key == 'info':
@@ -77,7 +76,7 @@ class MLflowHandler(BaseMLEngine):
         """ try post without data, check status code not in (not_found, method_not_allowed) """
         try:
             resp = requests.post(url)
-            if resp.status_code in (404, 405):
+            if resp.status_code in {404, 405}:
                 raise Exception(f'Model url is incorrect, status_code: {resp.status_code}')
         except requests.RequestException as e:
             raise Exception(f'Model url is incorrect: {str(e)}')

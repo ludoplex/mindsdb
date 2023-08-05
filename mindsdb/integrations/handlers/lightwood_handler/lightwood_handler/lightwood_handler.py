@@ -84,8 +84,7 @@ class LightwoodHandler(BaseMLEngine):
     @staticmethod
     @lru_cache(maxsize=5)
     def get_predictor(predictor_path, predictor_code):
-        predictor = lightwood.predictor_from_state(predictor_path, predictor_code)
-        return predictor
+        return lightwood.predictor_from_state(predictor_path, predictor_code)
 
     @profiler.profile('LightwoodHandler.predict')
     def predict(self, df, args=None):

@@ -12,10 +12,7 @@ class ClentCapabilities():
 
     def to_dict(self):
         funcs = [func for func in dir(self) if func.upper() == func]
-        res = {}
-        for f in funcs:
-            res[f] = getattr(self, f)
-        return res
+        return {f: getattr(self, f) for f in funcs}
 
     @property
     def LONG_PASSWORD(self):

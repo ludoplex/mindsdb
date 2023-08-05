@@ -80,7 +80,7 @@ class Scram():
         )
 
     def _split_payload(self, payload):
-        parts = {}
-        for part in [x for x in payload.split(',') if len(x) > 0]:
-            parts[part[0]] = part[2:]
-        return parts
+        return {
+            part[0]: part[2:]
+            for part in [x for x in payload.split(',') if len(x) > 0]
+        }

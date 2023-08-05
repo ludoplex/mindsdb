@@ -27,7 +27,15 @@ class NewsAPIArticleTable(APITable):
 
         for op, arg1, arg2 in conditions:
 
-            if arg1 == "query":
+            if arg1 == "publishedAt":
+                if op in ["Gt", "GtE"]:
+                    params["from"] = arg2
+                if op in ["Lt", "LtE"]:
+                    params["to"] = arg2
+                elif op == "Eq":
+                    params["from"] = arg2
+                    params["to"] = arg2
+            elif arg1 == "query":
                 params["q"] = urllib.parse.quote_plus(arg2)
             elif arg1 == "sources":
                 if len(arg2.split(",")) > 20:
@@ -36,14 +44,6 @@ class NewsAPIArticleTable(APITable):
                     )
                 else:
                     params[arg1] = arg2
-            elif arg1 == "publishedAt":
-                if op == "Gt" or op == "GtE":
-                    params["from"] = arg2
-                if op == "Lt" or op == "LtE":
-                    params["to"] = arg2
-                elif op == "Eq":
-                    params["from"] = arg2
-                    params["to"] = arg2
             else:
                 params[arg1] = arg2
 
@@ -60,15 +60,14 @@ class NewsAPIArticleTable(APITable):
             params["page"] = 1
 
         if query.order_by:
-            if len(query.order_by) == 1:
-                if str(query.order_by[0]) not in ["relevancy", "publishedAt"]:
-                    raise NotImplementedError("Not supported ordering by this field")
-                params["sort_by"] = str(query.order_by[0])
-            else:
+            if len(query.order_by) != 1:
                 raise ValueError(
                     "Multiple order by condition is not supported by the API"
                 )
 
+            if str(query.order_by[0]) not in ["relevancy", "publishedAt"]:
+                raise NotImplementedError("Not supported ordering by this field")
+            params["sort_by"] = str(query.order_by[0])
         result = self.handler.call_application_api(params=params)
 
         selected_columns = []

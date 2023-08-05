@@ -39,8 +39,7 @@ class ProjectDataNode(DataNode):
             }
             for key, val in tables.items()
         ]
-        result = [TablesRow.from_dict(row) for row in tables]
-        return result
+        return [TablesRow.from_dict(row) for row in tables]
 
     def has_table(self, table_name):
         tables = self.project.get_tables()

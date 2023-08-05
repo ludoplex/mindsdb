@@ -134,7 +134,7 @@ class GoogleBooksHandler(APIHandler):
         elif not params['maxShelf'] and params['minShelf']:
             minShelf = int(params['minShelf'])
             maxShelf = int(params['minShelf']) + 10
-        elif params['maxShelf'] and params['minShelf']:
+        elif params['maxShelf']:
             minShelf = int(params['minShelf'])
             maxShelf = int(params['maxShelf'])
 
@@ -163,8 +163,7 @@ class GoogleBooksHandler(APIHandler):
             key: value for key, value in params.items() if value is not None
         }
         volumes = service.volumes().list(**args).execute()
-        df = pd.DataFrame(volumes['items'], columns=self.volumes.get_columns())
-        return df
+        return pd.DataFrame(volumes['items'], columns=self.volumes.get_columns())
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """

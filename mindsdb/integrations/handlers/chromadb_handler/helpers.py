@@ -16,25 +16,17 @@ def extract_collection_name(sql_query):
     # Regular expression pattern to match the collection name from the FROM clause
     pattern = r"FROM\s+\w+\.(\w+)"
 
-    # Find the table name using regular expression
-    match = re.search(pattern, sql_query, re.IGNORECASE)
-
-    # If match found then extract the table name
-
-    if match:
-        table_name = match.group(1)
-        where_condition = None
-
-        # Regular expression pattern to match the where condition from the WHERE clause
-        pattern = r"WHERE\s+(.*)"
-        # Find the where condition using regular expression
-        match = re.search(pattern, sql_query, re.IGNORECASE)
-        if match:
-            where_condition = match.group(1)
-
-        return table_name, where_condition
-    else:
+    if not (match := re.search(pattern, sql_query, re.IGNORECASE)):
         return None, None
+    table_name = match[1]
+    # Regular expression pattern to match the where condition from the WHERE clause
+    pattern = r"WHERE\s+(.*)"
+    where_condition = (
+        match[1]
+        if (match := re.search(pattern, sql_query, re.IGNORECASE))
+        else None
+    )
+    return table_name, where_condition
 
 
 def get_metadata_filter(metadata_filter: str):
@@ -44,12 +36,10 @@ def get_metadata_filter(metadata_filter: str):
     for item in metadata_filter.split(","):
         if ":" in item:
             key, value = item.split(":")
-            dict_from_string[key] = value
         else:
             key = item
             value = True
-            dict_from_string[key] = value
-
+        dict_from_string[key] = value
     return dict_from_string
 
 
@@ -111,7 +101,7 @@ def df_to_documents(
 
 def split_documents(df, columns):
     # Load documents and split in chunks
-    log.logger.info(f"Loading documents from input data")
+    log.logger.info("Loading documents from input data")
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     documents = df_to_documents(df=df, page_content_columns=columns)

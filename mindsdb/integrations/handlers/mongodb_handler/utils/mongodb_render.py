@@ -19,18 +19,9 @@ class MongodbRender:
 
         collection = node.from_table.parts[-1]
 
-        # filter
-        filters = {}
-
-        if node.where is not None:
-            filters = self.handle_where(node.where)
-
-        group = {}
+        filters = self.handle_where(node.where) if node.where is not None else {}
         project = {'_id': 0}   # hide _id
-        if node.distinct:
-            # is group by distinct fields
-            group = {'_id': {}}
-
+        group = {'_id': {}} if node.distinct else {}
         if node.targets is not None:
             for col in node.targets:
                 if isinstance(col, Star):
@@ -39,11 +30,7 @@ class MongodbRender:
                     break
                 if isinstance(col, Identifier):
                     name = col.parts[-1]
-                    if col.alias is None:
-                        alias = name
-                    else:
-                        alias = col.alias.parts[-1]
-
+                    alias = name if col.alias is None else col.alias.parts[-1]
                     project[alias] = f'${name}'  # project field
 
                     # group by distinct fields
@@ -53,10 +40,7 @@ class MongodbRender:
 
                 elif isinstance(col, Constant):
                     val = str(col.value)  # str because int is interpreted as index
-                    if col.alias is None:
-                        alias = val
-                    else:
-                        alias = col.alias.parts[-1]
+                    alias = val if col.alias is None else col.alias.parts[-1]
                     project[alias] = val
 
 
@@ -80,9 +64,7 @@ class MongodbRender:
 
         # mongodb related pipeline steps for aggregate method
         if node.modifiers is not None:
-            for modifier in node.modifiers:
-                arg.append(modifier)
-
+            arg.extend(iter(node.modifiers))
         if filters:
             arg.append({"$match": filters})
 
@@ -110,7 +92,7 @@ class MongodbRender:
 
     def handle_where(self, node):
         # todo UnaryOperation, function
-        if not type(node) in [BinaryOperation]:
+        if type(node) not in [BinaryOperation]:
             raise NotImplementedError(f'Not supported type {type(node)}')
 
         # logic operation
@@ -125,9 +107,7 @@ class MongodbRender:
                 'and': '$and',
                 'or': '$or',
             }
-            query = {ops[op]: [query1, query2]}
-            return query
-
+            return {ops[op]: [query1, query2]}
         ops_map = {
             '>=': '$gte',
             '>': '$gt',
@@ -158,7 +138,6 @@ class MongodbRender:
 
                 return {var_name: val}
 
-            # is IN condition
             elif isinstance(arg2, Tuple):
                 # it should be IN, NOT IN
                 ops = {
@@ -171,12 +150,11 @@ class MongodbRender:
                     for i in arg2.items
                 ]
 
-                if op in ops:
-                    op2 = ops[op]
-                    cond = {op2: values}
-                else:
+                if op not in ops:
                     raise NotImplementedError(f'Not supported operator {op}')
 
+                op2 = ops[op]
+                cond = {op2: values}
                 return {var_name: cond}
 
         # try to make expression
@@ -199,11 +177,11 @@ class MongodbRender:
         if isinstance(node, Identifier):
             return f'${node.parts[-1]}'
         elif isinstance(node, Latest):
-            return f'LATEST'
+            return 'LATEST'
         elif isinstance(node, Constant):
             return node.value
         elif isinstance(node, TypeCast)\
-                and node.type_name.upper() in ('DATE', 'DATETIME'):
+                    and node.type_name.upper() in ('DATE', 'DATETIME'):
             formats = [
                 "%Y-%m-%d",
                 "%Y-%m-%dT%H:%M:%S.%f"

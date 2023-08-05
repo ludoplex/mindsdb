@@ -130,10 +130,9 @@ class GoogleSearchConsoleHandler(APIHandler):
             key: value for key, value in params.items() if key in accepted_params and value is not None
         }
         response = service.searchanalytics(). \
-            query(siteUrl=params['siteUrl'], body=search_analytics_query_request). \
-            execute()
-        df = pd.DataFrame(response['rows'], columns=self.analytics.get_columns())
-        return df
+                query(siteUrl=params['siteUrl'], body=search_analytics_query_request). \
+                execute()
+        return pd.DataFrame(response['rows'], columns=self.analytics.get_columns())
 
     def get_sitemaps(self, params: dict = None) -> DataFrame:
         """
@@ -152,11 +151,7 @@ class GoogleSearchConsoleHandler(APIHandler):
 
         # Get as many sitemaps as indicated by the row_limit parameter
         if params['row_limit']:
-            if params['row_limit'] > len(df):
-                row_limit = len(df)
-            else:
-                row_limit = params['row_limit']
-
+            row_limit = min(params['row_limit'], len(df))
             df = df[:row_limit]
 
         return df
@@ -171,8 +166,7 @@ class GoogleSearchConsoleHandler(APIHandler):
         """
         service = self.connect()
         response = service.sitemaps().submit(siteUrl=params['siteUrl'], feedpath=params['feedpath']).execute()
-        df = pd.DataFrame(response, columns=self.sitemaps.get_columns())
-        return df
+        return pd.DataFrame(response, columns=self.sitemaps.get_columns())
 
     def delete_sitemap(self, params: dict = None) -> DataFrame:
         """
@@ -184,8 +178,7 @@ class GoogleSearchConsoleHandler(APIHandler):
         """
         service = self.connect()
         response = service.sitemaps().delete(siteUrl=params['siteUrl'], feedpath=params['feedpath']).execute()
-        df = pd.DataFrame(response, columns=self.sitemaps.get_columns())
-        return df
+        return pd.DataFrame(response, columns=self.sitemaps.get_columns())
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """

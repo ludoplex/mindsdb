@@ -37,7 +37,7 @@ def retry_with_exponential_backoff(
             num_retries = 0
             delay = initial_delay
 
-            if isinstance(hour_budget, float) or isinstance(hour_budget, int):
+            if isinstance(hour_budget, (float, int)):
                 try:
                     max_retries = round(
                         (math.log((hour_budget * 3600) / initial_delay)) /
@@ -90,7 +90,7 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
     Note: first message for chat completion models are general directives with the system role, which will ideally be kept at all times. 
     """  # noqa
     encoder = tiktoken.encoding_for_model(model_name)
-    sys_priming = messages[0:1]
+    sys_priming = messages[:1]
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
@@ -109,15 +109,14 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
 
 def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
     """ Original token count implementation can be found in the OpenAI cookbook. """
-    if "gpt-3.5-turbo" in model_name:  # note: future models may deviate from this (only 0301 really complies)
-        num_tokens = 0
-        for message in messages:
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-            for key, value in message.items():
-                num_tokens += len(encoder.encode(value))
-                if key == "name":  # if there's a name, the role is omitted
-                    num_tokens += -1  # role is always required and always 1 token
-        num_tokens += 2  # every reply is primed with <im_start>assistant
-        return num_tokens
-    else:
+    if "gpt-3.5-turbo" not in model_name:
         raise NotImplementedError(f"""_count_tokens() is not presently implemented for model {model_name}.""")
+    num_tokens = 0
+    for message in messages:
+        num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+        for key, value in message.items():
+            num_tokens += len(encoder.encode(value))
+            if key == "name":  # if there's a name, the role is omitted
+                num_tokens += -1  # role is always required and always 1 token
+    num_tokens += 2  # every reply is primed with <im_start>assistant
+    return num_tokens

@@ -29,11 +29,16 @@ def choose_model(num_trials, horizon, window, exog_vars=[], threshold=MIN_TRIALS
     search through. Below a certain threshold, we switch to the default
     NHITS implementation instead of using AutoML to search for the best config.
     """
-    if num_trials >= threshold:
-        model = AutoNHITS(horizon, gpus=0, num_samples=num_trials, search_alg=HyperOptSearch())
-    else:  # faster implementation without auto parameter tuning
-        model = NHITS(horizon, window, hist_exog_list=exog_vars)
-    return model
+    return (
+        AutoNHITS(
+            horizon,
+            gpus=0,
+            num_samples=num_trials,
+            search_alg=HyperOptSearch(),
+        )
+        if num_trials >= threshold
+        else NHITS(horizon, window, hist_exog_list=exog_vars)
+    )
 
 
 class NeuralForecastHandler(BaseMLEngine):
@@ -55,15 +60,16 @@ class NeuralForecastHandler(BaseMLEngine):
         using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
         ###### store model args and time series settings in the model folder
-        model_args = {}
-        model_args["target"] = target
-        model_args["horizon"] = time_settings["horizon"]
-        model_args["order_by"] = time_settings["order_by"]
-        model_args["group_by"] = time_settings["group_by"]
-        model_args["frequency"] = (
-            using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
-        )
-        model_args["model_name"] = DEFAULT_MODEL_NAME
+        model_args = {
+            "target": target,
+            "horizon": time_settings["horizon"],
+            "order_by": time_settings["order_by"],
+            "group_by": time_settings["group_by"],
+            "frequency": using_args["frequency"]
+            if "frequency" in using_args
+            else infer_frequency(df, time_settings["order_by"]),
+            "model_name": DEFAULT_MODEL_NAME,
+        }
         num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
         model_args["exog_vars"] = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
         model_args["model_folder"] = tempfile.mkdtemp()
@@ -129,7 +135,7 @@ class NeuralForecastHandler(BaseMLEngine):
         elif attribute == 'info':
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]] + model_args["exog_vars"]
-            accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
+            accuracies = list(model_args["accuracies"].items())
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
 
         else:

@@ -33,16 +33,16 @@ class JiraProjectsTable(APITable):
         if query.limit:
             total_results = query.limit.value
 
-        issues_kwargs = {}
         order_by_conditions = {}
 
         if query.order_by and len(query.order_by) > 0:
             order_by_conditions["columns"] = []
             order_by_conditions["ascending"] = []
 
+            issues_kwargs = {}
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "key":
-                    continue    
+                    continue
                 if an_order.field.parts[1] in ["reporter","assignee","status"]:
                     if issues_kwargs != {}:
                         raise ValueError(
@@ -50,20 +50,19 @@ class JiraProjectsTable(APITable):
                         )
                     issues_kwargs["sort"] = an_order.field.parts[1]
                     issues_kwargs["direction"] = an_order.direction
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
+                if an_order.field.parts[1] not in self.get_columns():
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
+                order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
+                else:
+                    order_by_conditions["ascending"].append(False)
         project = self.handler.connection_data['project']
         jira_project_df = self.call_jira_api(project)
-        
+
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
@@ -88,7 +87,7 @@ class JiraProjectsTable(APITable):
                 by=order_by_conditions["columns"],
                 ascending=order_by_conditions["ascending"],
             )
-        
+
         if query.limit:
             jira_project_df = jira_project_df.head(total_results)
 

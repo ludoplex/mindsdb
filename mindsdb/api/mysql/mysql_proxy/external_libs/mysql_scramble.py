@@ -115,10 +115,7 @@ def _hash_password_323(password):
 
 
 def byte2int(b):
-    if isinstance(b, int):
-        return b
-    else:
-        return struct.unpack("!B", b)[0]
+    return b if isinstance(b, int) else struct.unpack("!B", b)[0]
 
 
 def int2byte(i):
@@ -128,8 +125,7 @@ def int2byte(i):
 def join_bytes(bs):
     if len(bs) == 0:
         return ""
-    else:
-        rv = bs[0]
-        for b in bs[1:]:
-            rv += b
-        return rv
+    rv = bs[0]
+    for b in bs[1:]:
+        rv += b
+    return rv

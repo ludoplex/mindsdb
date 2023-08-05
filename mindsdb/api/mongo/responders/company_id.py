@@ -16,10 +16,7 @@ class Responce(Responder):
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed
 
-        if need_response:
-            return {'ok': 1}
-
-        return None
+        return {'ok': 1} if need_response else None
 
 
 responder = Responce()

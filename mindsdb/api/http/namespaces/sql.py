@@ -123,7 +123,15 @@ class ListDatabases(Resource):
                 }
             elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
-                    'data': [{'name': x[0], 'tables': mysql_proxy.process_query('SHOW TABLES FROM `{}`'.format(x[0])).data} for x in result.data]
+                    'data': [
+                        {
+                            'name': x[0],
+                            'tables': mysql_proxy.process_query(
+                                f'SHOW TABLES FROM `{x[0]}`'
+                            ).data,
+                        }
+                        for x in result.data
+                    ]
                 }
         except Exception as e:
             listing_query_response = {

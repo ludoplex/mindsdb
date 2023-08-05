@@ -127,7 +127,7 @@ def _get_show_where(
     if statement.where is not None:
         where.append(statement.where)
 
-    if len(where) > 0:
+    if where:
         return reduce(
             lambda prev, next: BinaryOperation("and", args=[prev, next]), where
         )
@@ -174,7 +174,7 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
-        elif type(statement) == DropDatasource or type(statement) == DropDatabase:
+        elif type(statement) in [DropDatasource, DropDatabase]:
             return self.answer_drop_database(statement)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
@@ -186,7 +186,7 @@ class ExecuteCommands:
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
-                if isinstance(statement.modes, list) is False:
+                if not isinstance(statement.modes, list):
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
             if sql_category in ("predictors", "models"):
@@ -418,7 +418,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
-            # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
                 table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
@@ -468,11 +467,7 @@ class ExecuteCommands:
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
             elif sql_category == "table status":
-                # TODO improve it
-                # SHOW TABLE STATUS LIKE 'table'
-                table_name = None
-                if statement.like is not None:
-                    table_name = statement.like
+                table_name = statement.like if statement.like is not None else None
                 # elif condition == 'from' and type(expression) == Identifier:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
@@ -507,10 +502,7 @@ class ExecuteCommands:
                         profiler.disable()
                         self.session.profiling = False
                 elif statement.arg.args[0].parts[0].lower() == 'predictor_cache':
-                    if statement.arg.args[1].value in (1, True):
-                        self.session.predictor_cache = True
-                    else:
-                        self.session.predictor_cache = False
+                    self.session.predictor_cache = statement.arg.args[1].value in (1, True)
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -568,8 +560,8 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
-            if statement.from_select is None:
-                if statement.table.parts[-1].lower() == "models_versions":
+            if statement.table.parts[-1].lower() == "models_versions":
+                if statement.from_select is None:
                     return self.answer_update_model_version(statement)
 
             SQLQuery(statement, session=self.session, execute=True)
@@ -594,12 +586,10 @@ class ExecuteCommands:
         elif type(statement) == CreateTable:
             # TODO
             return self.answer_apply_predictor(statement)
-        # -- jobs --
         elif type(statement) == CreateJob:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
-        # -- chatbots --
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
         elif type(statement) == DropChatBot:

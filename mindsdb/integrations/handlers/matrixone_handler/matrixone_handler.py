@@ -128,7 +128,7 @@ class MatrixOneHandler(DatabaseHandler):
                 )
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response

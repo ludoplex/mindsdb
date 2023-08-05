@@ -56,7 +56,7 @@ class BaseMerlionForecastAdapter:
     def predict(self, df: pd.DataFrame, target: str) -> pd.DataFrame:
         forecast_step = self.max_forecast_steps
         df = df[df.index <= self.model.last_train_time + self.model.timedelta * forecast_step]
-        if len(list(df.columns.values)) == 0:
+        if not list(df.columns.values):
             df.loc[:, target] = 0
         predict_data = TimeSeries.from_pd(df)
         predict_pred, predict_err = self.model.forecast(time_stamps=predict_data.time_stamps)
@@ -64,11 +64,7 @@ class BaseMerlionForecastAdapter:
 
     def __prepare_forecast_return(self, target: str, pred_ts: TimeSeries, err_ts: TimeSeries) -> pd.DataFrame:
         pred_df: pd.DataFrame = pred_ts.to_pd()
-        if err_ts is None:
-            err_df = None
-        else:
-            err_df = err_ts.to_pd()
-
+        err_df = None if err_ts is None else err_ts.to_pd()
         if err_df is None or target in list(err_df.columns.values):  # error and predict sometimes are same
             std = pred_df[target].std()
             pred_df[f"{target}__upper"] = pred_df[f"{target}"] + std * norm.ppf(0.975)

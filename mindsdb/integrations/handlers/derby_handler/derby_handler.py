@@ -108,9 +108,9 @@ class DerbyHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected is True:
                 self.is_connected = False
 
         return responseCode
@@ -149,7 +149,7 @@ class DerbyHandler(DatabaseHandler):
                 )
                 self.connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -164,11 +164,7 @@ class DerbyHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        query_str = query.to_string() if isinstance(query, ASTNode) else str(query)
         return self.native_query(query_str)
 
 

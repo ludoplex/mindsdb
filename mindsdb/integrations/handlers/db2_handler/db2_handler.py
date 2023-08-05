@@ -112,9 +112,9 @@ class DB2Handler(DatabaseHandler):
             log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected is True:
                 self.is_connected = False
 
         return responseCode
@@ -134,7 +134,7 @@ class DB2Handler(DatabaseHandler):
         with conn.cursor() as cur:
             try:
                 cur.execute(query)
-                   
+
                 if cur._result_set_produced :
                     result = cur.fetchall() 
                     response = Response(
@@ -155,7 +155,7 @@ class DB2Handler(DatabaseHandler):
                 )
                 self.connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response

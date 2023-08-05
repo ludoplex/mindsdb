@@ -75,16 +75,12 @@ class NuoHandler(DatabaseHandler):
 
         jdbc_url = "jdbc:com.nuodb://" + self.host
 
-        #port is an optional paramter, if found then append
-        port = self.connection_config.get('port')
-        if port: 
+        if port := self.connection_config.get('port'):
             jdbc_url = jdbc_url + ":" + str(port)
-        
+
         jdbc_url = jdbc_url + "/" + self.database + "?user=" + self.user + "&password=" + self.password 
 
-        #check if a schema is provided in the connection args, if provided use the schema to establish connection
-        schema = self.connection_config.get('schema')
-        if schema: 
+        if schema := self.connection_config.get('schema'):
             self.schema = schema
             jdbc_url = jdbc_url + "&schema=" + schema
 
@@ -92,12 +88,8 @@ class NuoHandler(DatabaseHandler):
         if(str(self.is_direct).lower() == 'true'): 
             jdbc_url = jdbc_url + "&direct=true"
 
-        
-        driver_args = self.connection_config.get('driver_args')
 
-        #if driver args are present then construct them in the form: &query=one#qquerytwo=true
-        #finally append these to the url
-        if(driver_args): 
+        if driver_args := self.connection_config.get('driver_args'):
             driver_arg_string = '&'.join(driver_args.split(","))
             jdbc_url = jdbc_url + "&" + driver_arg_string 
 
@@ -134,9 +126,9 @@ class NuoHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected is True:
                 self.is_connected = False
 
         return responseCode
@@ -175,7 +167,7 @@ class NuoHandler(DatabaseHandler):
                 )
                 self.connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -190,11 +182,7 @@ class NuoHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        query_str = query.to_string() if isinstance(query, ASTNode) else str(query)
         return self.native_query(query_str)
 
 

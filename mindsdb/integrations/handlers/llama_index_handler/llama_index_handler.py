@@ -73,7 +73,9 @@ class LlamaIndexHandler(BaseMLEngine):
             engine_kwargs['text_qa_template'] = QuestionAnswerPrompt(prompt_template)
 
         if input_column is None:
-            raise Exception(f'`input_column` must be provided at model creation time or through USING clause when predicting. Please try again.')  # noqa
+            raise Exception(
+                '`input_column` must be provided at model creation time or through USING clause when predicting. Please try again.'
+            )
 
         if input_column not in df.columns:
             raise Exception(f'Column "{input_column}" not found in input data! Please try again.')
@@ -91,8 +93,7 @@ class LlamaIndexHandler(BaseMLEngine):
             query_results = query_engine.query(question)  # TODO: provide extra_info in explain_target col
             results.append(query_results.response)
 
-        result_df = pd.DataFrame({'question': questions, args['target']: results})  # result_df['answer'].tolist()
-        return result_df
+        return pd.DataFrame({'question': questions, args['target']: results})
 
     def _get_service_context(self):
         args = self.model_storage.json_get('args')
@@ -100,18 +101,16 @@ class LlamaIndexHandler(BaseMLEngine):
         openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
         llm = OpenAI(openai_api_key=openai_api_key)  # TODO: all usual params should go here
         embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
-        service_context = ServiceContext.from_defaults(
-            llm_predictor=LLMPredictor(llm=llm),
-            embed_model=embed_model
+        return ServiceContext.from_defaults(
+            llm_predictor=LLMPredictor(llm=llm), embed_model=embed_model
         )
-        return service_context
     
     def _setup_index(self, documents):
         args = self.model_storage.json_get('args')
         indexer: VectorStore = getattr(llama_index, args['using']['index_class'])
-        index = indexer.from_documents(documents, service_context=self._get_service_context())
-
-        return index
+        return indexer.from_documents(
+            documents, service_context=self._get_service_context()
+        )
 
     def _validate_prompt_template(self, prompt_template: str):
         if '{context_str}' not in prompt_template or '{query_str}' not in prompt_template:

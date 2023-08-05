@@ -396,10 +396,7 @@ class DataRow(PostgresMessage):
         self.identifier = PostgresBackendMessageIdentifier.DATA_ROW
         self.backend_capable = True
         self.frontend_capable = False
-        if len(rows) != 0:
-            self.num_cols = len(rows[0])
-        else:
-            self.num_cols = 0
+        self.num_cols = len(rows[0]) if len(rows) != 0 else 0
         self.rows = rows
         super().__init__()
 
@@ -538,7 +535,7 @@ class BaseFrontendMessage(PostgresMessage):
 
     def read(self, packet_reader: PostgresPacketReader):
         self.length = packet_reader.read_int32()
-        if (self.length - 4) > 0:
+        if self.length > 4:
             self.response = packet_reader.read_bytes(self.length - 4)
         return self
 
@@ -580,7 +577,7 @@ class Parse(BaseFrontendMessage):
         self.name = packet_reader.read_string()
         self.query = packet_reader.read_string()
         self.num_params = packet_reader.read_int16()
-        for i in range(self.num_params):
+        for _ in range(self.num_params):
             self.parameters.append(packet_reader.read_int32())
         return self
 

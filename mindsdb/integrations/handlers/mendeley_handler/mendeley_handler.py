@@ -97,12 +97,11 @@ class MendeleyHandler(APIHandler):
         sum = 0
         if data.authors!=None:
             for x in data.authors:
-                if sum + 1 == len(data.authors) and x.first_name!=None and x.last_name!=None  :
+                if sum + 1 == len(data.authors) and x.first_name!=None and x.last_name!=None:
                     authors = authors + x.first_name + " " + x.last_name
-                else:
-                    if x.first_name!=None and x.last_name!=None:
-                        authors = authors + x.first_name + " " + x.last_name + ", "
-                        sum = sum + 1
+                elif x.first_name!=None and x.last_name!=None:
+                    authors = authors + x.first_name + " " + x.last_name + ", "
+                    sum = sum + 1
         return authors
 
     def get_keywords(self,data):
@@ -119,10 +118,9 @@ class MendeleyHandler(APIHandler):
             for x in data.keywords:
                 if sum + 1 == len(data.keywords):
                     keywords = keywords  + x + " "
-                else:
-                    if x!=None :
-                        keywords = keywords + x + ", "
-                        sum = sum + 1
+                elif x!=None:
+                    keywords = keywords + x + ", "
+                    sum = sum + 1
         return keywords
     
     def create_dict(self,data):
@@ -135,11 +133,12 @@ class MendeleyHandler(APIHandler):
             Returns:
                 dict dictionary
         """
-        dict = {}
-        dict["title"] = data.title
-        dict["type"] = data.type
-        dict["source"] = data.source
-        dict["year"] = data.year
+        dict = {
+            "title": data.title,
+            "type": data.type,
+            "source": data.source,
+            "year": data.year,
+        }
         if data.identifiers!=None:
             dict["pmid"] = data.identifiers.get("pmid")
             dict["sgr"] = data.identifiers.get("sgr")
@@ -148,16 +147,13 @@ class MendeleyHandler(APIHandler):
             dict["doi"] = data.identifiers.get("doi")
             dict["pui"] = data.identifiers.get("pui")
         dict["authors"] = self.get_authors(data)
-        if data.keywords!=None:
-            dict["keywords"] = self.get_keywords(data)
-        else:
-            dict["keywords"] = None
+        dict["keywords"] = self.get_keywords(data) if data.keywords!=None else None
         dict["link"] = data.link
         dict["id"] = data.id
         return dict
     
     def call_mendeley_api(self, method_name: str, params: Dict) -> pd.DataFrame:
-        
+
         """The method call_mendeley_api is used to communicate with Mendeley. Depending on the method used there are three different types
         of search conducted.
         The advanced_search results in a CatalogSearch resource, which, depending on the parameters used, could either be a number of different documents (CatalogDocument),
@@ -185,20 +181,21 @@ class MendeleyHandler(APIHandler):
             'open_access': params.get("open_access")
             }
             data = self.session.catalog.advanced_search(**search_params)
-            sum = 0
             df = pd.DataFrame()
-            for x in data.list(page_size=params["limit"]).items:
-                    if sum == 0:
-                        df = pd.DataFrame(self.create_dict(x),index=[0])
-                        sum += 1
-                    else : 
-                        df = df.append(self.create_dict(x),ignore_index = True)
-                        sum += 1
+            for sum, x in enumerate(data.list(page_size=params["limit"]).items):
+                df = (
+                    pd.DataFrame(self.create_dict(x), index=[0])
+                    if sum == 0
+                    else df.append(self.create_dict(x), ignore_index=True)
+                )
             if df.empty:
                 raise NotImplementedError(('Insufficient or wrong input given'))
             else:
                 return df
 
+        elif method_name == 'get':
+            data = self.session.catalog.get(params.get("id"))
+            return pd.DataFrame(self.create_dict(data),index=[0])
         elif method_name == 'identifier_search':
             search_params = {
             'arxiv': params.get("arxiv"),
@@ -210,14 +207,9 @@ class MendeleyHandler(APIHandler):
             'filehash': params.get("filehash")
             }
             data = self.session.catalog.by_identifier(**search_params)
-            df = pd.DataFrame(self.create_dict(data),index=[0])
-            return df
-
-        elif method_name == 'get':
-            data = self.session.catalog.get(params.get("id"))
-            df = pd.DataFrame(self.create_dict(data),index=[0])
-            return df
-
-        raise NotImplementedError('Method name {} not supported by Mendeley API Handler'.format(method_name))
+            return pd.DataFrame(self.create_dict(data),index=[0])
+        raise NotImplementedError(
+            f'Method name {method_name} not supported by Mendeley API Handler'
+        )
 
 

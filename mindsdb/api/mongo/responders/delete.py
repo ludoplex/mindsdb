@@ -49,27 +49,23 @@ class Responce(Responder):
         if 'name' in delete_filter:
             obj_name = delete_filter['name']
 
-        version = None
-        if 'version' in delete_filter:
-            version = delete_filter['version']
-
+        version = delete_filter['version'] if 'version' in delete_filter else None
         if obj_name is None and obj_id is None:
             raise Exception("Can't find object to delete, use filter by name or _id")
 
         if obj_name is None:
-            if table == 'models' or table == 'models_versions':
+            if table in ['models', 'models_versions']:
                 model_id = obj_id >> 20
+                models = mindsdb_env['model_controller'].get_models(
+                    ml_handler_name=None,
+                    project_name=project_name
+                )
+                for model in models:
+                    if model['id'] == model_id:
+                        obj_name = model['name']
+                        break
                 if obj_name is None:
-                    models = mindsdb_env['model_controller'].get_models(
-                        ml_handler_name=None,
-                        project_name=project_name
-                    )
-                    for model in models:
-                        if model['id'] == model_id:
-                            obj_name = model['name']
-                            break
-                    if obj_name is None:
-                        raise Exception("Can't find model by _id")
+                    raise Exception("Can't find model by _id")
             elif table == 'jobs':
                 jobs_controller = JobsController()
                 for job in jobs_controller.get_list(project_name):

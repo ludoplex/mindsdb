@@ -105,7 +105,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
                 'success': False
             }
 
-        if password != hardcoded_password and password != hardcoded_password_hash:
+        if password not in [hardcoded_password, hardcoded_password_hash]:
             logger.warning(f'check auth, user={username}: password mismatch')
             return {
                 'success': False
@@ -243,7 +243,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
 
-                if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
+                if (
+                    new_method == 'caching_sha2_password'
+                    and not self.session.is_ssl
+                ):
                     logger.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                                    'error: cant switch to caching_sha2_password without SSL')
                     self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
@@ -254,24 +257,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
-                    if password == b'\x00':
-                        password = ''
-                    else:
-                        password = get_fast_auth_password()
+                    password = '' if password == b'\x00' else get_fast_auth_password()
         elif 'caching_sha2_password' in client_auth_plugin:
             logger.debug(
                 f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using caching_sha2_password'
             )
             password = handshake_resp.enc_password.value
-            if password == b'\x00':
-                password = ''
-            else:
-                # FIXME https://github.com/mindsdb/mindsdb/issues/1374
-                # if self.session.is_ssl:
-                #     password = get_fast_auth_password()
-                # else:
-                password = switch_auth()
+            password = '' if password == b'\x00' else switch_auth()
         elif 'mysql_native_password' in client_auth_plugin:
             logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                          'check auth using mysql_native_password')
@@ -415,9 +408,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             user_class = self.request.recv(1)
             user_class = struct.unpack('B', user_class)[0]
-            email_confirmed = 1
-            if user_class > 1:
-                email_confirmed = (user_class >> 2) & 1
+            email_confirmed = (user_class >> 2) & 1 if user_class > 1 else 1
             user_class = user_class & 3
 
             database_name_len = self.request.recv(2)
@@ -494,20 +485,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.query_execute(sql)
 
-        if executor.data is None:
-            resp = SQLAnswer(
+        return (
+            SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
-        else:
-            resp = SQLAnswer(
+            if executor.data is None
+            else SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
                 columns=self.to_mysql_columns(executor.columns),
                 data=executor.data,
-                status=executor.server_status
+                status=executor.server_status,
             )
-        return resp
+        )
 
     def answer_stmt_prepare(self, sql):
         executor = Executor(
@@ -571,11 +562,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket, status=0x0062))
         else:
             # send all
-            for row in executor.data:
-                packages.append(
-                    self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+            packages.extend(
+                self.packet(
+                    BinaryResultsetRowPacket, data=row, columns=columns_def
                 )
-
+                for row in executor.data
+            )
             server_status = executor.server_status or 0x0002
             packages.append(self.last_packet(status=server_status))
             prepared_stmt['fetched'] += len(executor.data)
@@ -594,13 +586,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
             return self.send_query_answer(resp)
 
-        packages = []
         columns = self.to_mysql_columns(executor.columns)
-        for row in executor.data[fetched:limit]:
-            packages.append(
-                self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
-            )
-
+        packages = [
+            self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
+            for row in executor.data[fetched:limit]
+        ]
         prepared_stmt['fetched'] += len(executor.data[fetched:limit])
 
         if len(executor.data) <= limit + fetched:

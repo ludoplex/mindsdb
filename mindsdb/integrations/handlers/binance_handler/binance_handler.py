@@ -140,4 +140,6 @@ class BinanceHandler(APIHandler):
         """
         if method_name == 'klines':
             return self._get_klines(params)
-        raise NotImplementedError('Method name {} not supported by Binance API Handler'.format(method_name))
+        raise NotImplementedError(
+            f'Method name {method_name} not supported by Binance API Handler'
+        )

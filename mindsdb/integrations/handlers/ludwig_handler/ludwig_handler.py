@@ -52,11 +52,7 @@ class LudwigHandler(BaseMLEngine):
         predictions = dask.compute(model.predict(df)[0])[0]
         target_name = model.config['output_features'][0]['column']
 
-        if target_name not in df:
-            predictions.columns = [target_name]
-        else:
-            predictions.columns = ['prediction']
-
+        predictions.columns = ['prediction'] if target_name in df else [target_name]
         predictions[f'{target_name}_explain'] = None
         joined = df.join(predictions)
 
