@@ -1,7 +1,7 @@
-langchain==0.0.186
+langchain==0.2.5
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25
-requests==2.28.0
+requests==2.32.4
 sentence_transformers>=2.2.2
 markupsafe == 2.0.1
